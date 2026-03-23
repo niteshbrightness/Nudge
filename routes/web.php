@@ -22,6 +22,8 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::get('projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::post('projects/sync', [ProjectController::class, 'sync'])->name('projects.sync');
     Route::get('projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+    Route::get('projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');
+    Route::put('projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
 
     // Webhook event log (read-only)
     Route::get('webhooks', [WebhookEventController::class, 'index'])->name('webhooks.index');

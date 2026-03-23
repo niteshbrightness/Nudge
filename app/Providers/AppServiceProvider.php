@@ -52,7 +52,7 @@ class AppServiceProvider extends ServiceProvider
             $credentials = $manager->credentials('activecollab') ?? [];
 
             return new ActiveCollabService(
-                baseUrl: $credentials['url'] ?? config('services.activecollab.url', ''),
+                baseUrl: rtrim($credentials['url'] ?? config('services.activecollab.url', ''), '/'),
                 token: $credentials['token'] ?? config('services.activecollab.token', ''),
                 webhookSecret: $credentials['webhook_secret'] ?? config('services.activecollab.webhook_secret', ''),
             );

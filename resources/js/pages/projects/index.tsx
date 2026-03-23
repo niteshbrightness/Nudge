@@ -13,8 +13,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const statusVariant = (status: Project['status']) => {
-    if (status === 'completed') return 'secondary';
-    if (status === 'on_hold') return 'outline';
+    if (status === 'completed') {
+        return 'secondary';
+    }
+
+    if (status === 'on_hold') {
+        return 'outline';
+    }
+
     return 'default';
 };
 
@@ -52,10 +58,7 @@ export default function ProjectsIndex({ projects }: { projects: Paginator<Projec
                                 {projects.data.map((project) => (
                                     <tr key={project.id} className="hover:bg-sidebar-accent/50">
                                         <td className="px-6 py-3 font-medium">
-                                            <Link
-                                                href={show(project.id)}
-                                                className="hover:underline"
-                                            >
+                                            <Link href={show(project.id)} className="hover:underline">
                                                 {project.name}
                                             </Link>
                                         </td>

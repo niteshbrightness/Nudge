@@ -35,6 +35,13 @@ class ProjectRepository implements ProjectRepositoryInterface
         );
     }
 
+    public function update(Project $project, array $data): Project
+    {
+        $project->update($data);
+
+        return $project->refresh()->load('client');
+    }
+
     public function allForTenant(): Collection
     {
         return Project::query()->with('client')->latest()->get();

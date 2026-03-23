@@ -31,6 +31,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Fallback Lookback Window
+    |--------------------------------------------------------------------------
+    | When a client has never received a notification, this defines how many
+    | days back to look for webhook events to include in their first summary.
+    */
+    'max_lookback_days' => (int) env('NOTIFICATION_MAX_LOOKBACK_DAYS', 7),
+
+    /*
+    |--------------------------------------------------------------------------
     | Twilio
     |--------------------------------------------------------------------------
     */

@@ -1,16 +1,17 @@
 import { Head } from '@inertiajs/react';
+import { Form } from '@inertiajs/react';
 import ClientController from '@/actions/App/Http/Controllers/Clients/ClientController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ProjectMultiSelect } from '@/components/ui/project-multi-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { edit, index } from '@/routes/clients';
 import type { BreadcrumbItem, Client, Timezone } from '@/types';
-import { Form } from '@inertiajs/react';
 
 const breadcrumbs = (client: Client): BreadcrumbItem[] => [
     { title: 'Dashboard', href: dashboard() },
@@ -18,12 +19,25 @@ const breadcrumbs = (client: Client): BreadcrumbItem[] => [
     { title: `Edit ${client.name}`, href: edit(client.id) },
 ];
 
-export default function EditClient({ client, timezones }: { client: Client; timezones: Timezone[] }) {
+export default function EditClient({
+    client,
+    timezones,
+    availableProjects,
+    selectedProjectIds,
+}: {
+    client: Client;
+    timezones: Timezone[];
+    availableProjects: Array<{ id: number; name: string }>;
+    selectedProjectIds: number[];
+}) {
     return (
         <AppLayout breadcrumbs={breadcrumbs(client)}>
             <Head title={`Edit ${client.name}`} />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                <Heading title={`Edit ${client.name}`} description="Update client details and notification preferences." />
+                <Heading
+                    title={`Edit ${client.name}`}
+                    description="Update client details and notification preferences."
+                />
 
                 <div className="max-w-xl rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border">
                     <Form
@@ -84,6 +98,16 @@ export default function EditClient({ client, timezones }: { client: Client; time
                                         placeholder="Any additional context"
                                     />
                                     <InputError message={errors.notes} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Projects (optional)</Label>
+                                    <ProjectMultiSelect
+                                        options={availableProjects}
+                                        defaultSelected={selectedProjectIds}
+                                        placeholder="Search and assign projects…"
+                                    />
+                                    <InputError message={errors['project_ids']} />
                                 </div>
 
                                 <div className="flex gap-3">
