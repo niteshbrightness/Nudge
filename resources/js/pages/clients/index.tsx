@@ -51,7 +51,7 @@ export default function ClientsIndex({ clients }: { clients: Paginator<Client> }
                                             {client.timezone?.label ?? '—'}
                                         </td>
                                         <td className="px-6 py-3 text-muted-foreground">
-                                            {client.projects?.length ?? 0}
+                                            {(client as Client & { projects_count: number }).projects_count ?? 0}
                                         </td>
                                         <td className="px-6 py-3 text-right">
                                             <div className="flex items-center justify-end gap-2">

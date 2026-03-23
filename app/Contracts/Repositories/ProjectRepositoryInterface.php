@@ -16,6 +16,8 @@ interface ProjectRepositoryInterface
 
     public function upsertFromActiveCollab(array $data): Project;
 
+    public function update(Project $project, array $data): Project;
+
     /** @return Collection<int, Project> */
     public function allForTenant(): Collection;
 }

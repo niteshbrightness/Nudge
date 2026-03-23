@@ -83,7 +83,7 @@ class ActiveCollabIntegration extends AbstractIntegration
         }
 
         try {
-            Http::withHeaders(['X-Angie-AuthApiToken' => $credentials['token']])
+            Http::withToken($credentials['token'])
                 ->get(rtrim($credentials['url'], '/').'/api/v1/users/me')
                 ->throw();
 

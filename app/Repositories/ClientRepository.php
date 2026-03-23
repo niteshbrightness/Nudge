@@ -12,6 +12,7 @@ class ClientRepository implements ClientRepositoryInterface
     {
         return Client::query()
             ->with('timezone')
+            ->withCount('projects')
             ->latest()
             ->paginate($perPage);
     }

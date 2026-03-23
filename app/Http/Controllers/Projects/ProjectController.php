@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Projects;
 
 use App\Contracts\Repositories\ProjectRepositoryInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Projects\UpdateProjectRequest;
+use App\Models\Client;
 use App\Models\Project;
 use App\Services\ActiveCollabService;
 use Illuminate\Http\RedirectResponse;
@@ -29,6 +31,21 @@ class ProjectController extends Controller
         return Inertia::render('projects/show', [
             'project' => $this->projects->find($project->id),
         ]);
+    }
+
+    public function edit(Project $project): Response
+    {
+        return Inertia::render('projects/edit', [
+            'project' => $this->projects->find($project->id),
+            'clients' => Client::query()->orderBy('name')->get(['id', 'name']),
+        ]);
+    }
+
+    public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
+    {
+        $this->projects->update($project, ['client_id' => $request->client_id]);
+
+        return redirect()->route('projects.show', $project)->with('success', 'Client assigned successfully.');
     }
 
     public function sync(): RedirectResponse

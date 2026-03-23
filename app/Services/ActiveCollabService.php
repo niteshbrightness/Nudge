@@ -22,8 +22,8 @@ class ActiveCollabService
         if (empty($this->baseUrl) || empty($this->token)) {
             throw new RuntimeException('ActiveCollab is not connected. Please configure it in Integrations.');
         }
-
-        $response = Http::withHeaders(['X-Angie-AuthApiToken' => $this->token])
+        logger()->info("{$this->baseUrl}/api/v1/projects");
+        $response = Http::withToken($this->token)
             ->get("{$this->baseUrl}/api/v1/projects")
             ->throw();
 

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
-import { index, show } from '@/routes/projects';
+import { edit, index, show } from '@/routes/projects';
 import type { BreadcrumbItem, Project } from '@/types';
 
 const breadcrumbs = (project: Project): BreadcrumbItem[] => [
@@ -31,6 +31,9 @@ export default function ProjectShow({ project }: { project: Project }) {
                                 </a>
                             </Button>
                         )}
+                        <Button variant="outline" size="sm" asChild>
+                            <a href={edit.url(project.id)}>Edit</a>
+                        </Button>
                         <Badge variant={project.status === 'completed' ? 'secondary' : 'default'}>
                             {project.status.replace('_', ' ')}
                         </Badge>
