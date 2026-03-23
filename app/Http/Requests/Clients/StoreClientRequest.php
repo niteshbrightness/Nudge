@@ -18,6 +18,13 @@ class StoreClientRequest extends FormRequest
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'project_ids' => array_values(array_filter((array) $this->input('project_ids', []), fn ($v) => $v !== '')),
+        ]);
+    }
+
     public function rules(): array
     {
         return [
@@ -25,6 +32,8 @@ class StoreClientRequest extends FormRequest
             'phone' => ['required', 'string', 'max:20'],
             'timezone_id' => ['required', 'integer', 'exists:timezones,id'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'project_ids' => ['nullable', 'array'],
+            'project_ids.*' => ['integer', 'exists:projects,id'],
         ];
     }
 
@@ -35,6 +44,7 @@ class StoreClientRequest extends FormRequest
     {
         return [
             'timezone_id.exists' => 'The selected timezone is invalid.',
+            'project_ids.*.exists' => 'One or more selected projects are invalid.',
         ];
     }
 }

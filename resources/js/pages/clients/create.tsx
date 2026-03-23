@@ -6,6 +6,7 @@ import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ProjectMultiSelect } from '@/components/ui/project-multi-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -18,7 +19,13 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Add Client', href: create() },
 ];
 
-export default function CreateClient({ timezones }: { timezones: Timezone[] }) {
+export default function CreateClient({
+    timezones,
+    availableProjects,
+}: {
+    timezones: Timezone[];
+    availableProjects: Array<{ id: number; name: string }>;
+}) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Add Client" />
@@ -62,6 +69,15 @@ export default function CreateClient({ timezones }: { timezones: Timezone[] }) {
                                     <Label htmlFor="notes">Notes (optional)</Label>
                                     <Input id="notes" name="notes" placeholder="Any additional context" />
                                     <InputError message={errors.notes} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Projects (optional)</Label>
+                                    <ProjectMultiSelect
+                                        options={availableProjects}
+                                        placeholder="Search and assign projects…"
+                                    />
+                                    <InputError message={errors['project_ids']} />
                                 </div>
 
                                 <div className="flex gap-3">

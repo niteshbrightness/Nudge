@@ -6,6 +6,7 @@ import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ProjectMultiSelect } from '@/components/ui/project-multi-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -18,7 +19,17 @@ const breadcrumbs = (client: Client): BreadcrumbItem[] => [
     { title: `Edit ${client.name}`, href: edit(client.id) },
 ];
 
-export default function EditClient({ client, timezones }: { client: Client; timezones: Timezone[] }) {
+export default function EditClient({
+    client,
+    timezones,
+    availableProjects,
+    selectedProjectIds,
+}: {
+    client: Client;
+    timezones: Timezone[];
+    availableProjects: Array<{ id: number; name: string }>;
+    selectedProjectIds: number[];
+}) {
     return (
         <AppLayout breadcrumbs={breadcrumbs(client)}>
             <Head title={`Edit ${client.name}`} />
@@ -87,6 +98,16 @@ export default function EditClient({ client, timezones }: { client: Client; time
                                         placeholder="Any additional context"
                                     />
                                     <InputError message={errors.notes} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Projects (optional)</Label>
+                                    <ProjectMultiSelect
+                                        options={availableProjects}
+                                        defaultSelected={selectedProjectIds}
+                                        placeholder="Search and assign projects…"
+                                    />
+                                    <InputError message={errors['project_ids']} />
                                 </div>
 
                                 <div className="flex gap-3">

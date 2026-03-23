@@ -16,4 +16,7 @@ interface ClientRepositoryInterface
     public function update(Client $client, array $data): Client;
 
     public function delete(Client $client): void;
+
+    /** @param array<int> $projectIds */
+    public function syncProjects(Client $client, array $projectIds): void;
 }

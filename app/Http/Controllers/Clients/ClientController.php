@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Clients\StoreClientRequest;
 use App\Http\Requests\Clients\UpdateClientRequest;
 use App\Models\Client;
+use App\Models\Project;
 use App\Models\Timezone;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -27,12 +28,15 @@ class ClientController extends Controller
     {
         return Inertia::render('clients/create', [
             'timezones' => Timezone::query()->orderBy('offset_minutes')->get(['id', 'label', 'name']),
+            'availableProjects' => Project::query()->whereNull('client_id')->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     public function store(StoreClientRequest $request): RedirectResponse
     {
-        $this->clients->create($request->validated());
+        $client = $this->clients->create($request->safe()->except('project_ids'));
+        $projectIds = array_map('intval', array_filter($request->input('project_ids', []), fn ($v) => $v !== ''));
+        $this->clients->syncProjects($client, $projectIds);
 
         return redirect()->route('clients.index')->with('success', 'Client created successfully.');
     }
@@ -42,12 +46,19 @@ class ClientController extends Controller
         return Inertia::render('clients/edit', [
             'client' => $client->load('timezone'),
             'timezones' => Timezone::query()->orderBy('offset_minutes')->get(['id', 'label', 'name']),
+            'availableProjects' => Project::query()
+                ->where(fn ($q) => $q->whereNull('client_id')->orWhere('client_id', $client->id))
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'selectedProjectIds' => Project::query()->where('client_id', $client->id)->pluck('id'),
         ]);
     }
 
     public function update(UpdateClientRequest $request, Client $client): RedirectResponse
     {
-        $this->clients->update($client, $request->validated());
+        $this->clients->update($client, $request->safe()->except('project_ids'));
+        $projectIds = array_map('intval', array_filter($request->input('project_ids', []), fn ($v) => $v !== ''));
+        $this->clients->syncProjects($client, $projectIds);
 
         return redirect()->route('clients.index')->with('success', 'Client updated successfully.');
     }
