@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { Form } from '@inertiajs/react';
 import ClientController from '@/actions/App/Http/Controllers/Clients/ClientController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -10,7 +11,6 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { edit, index } from '@/routes/clients';
 import type { BreadcrumbItem, Client, Timezone } from '@/types';
-import { Form } from '@inertiajs/react';
 
 const breadcrumbs = (client: Client): BreadcrumbItem[] => [
     { title: 'Dashboard', href: dashboard() },
@@ -23,7 +23,10 @@ export default function EditClient({ client, timezones }: { client: Client; time
         <AppLayout breadcrumbs={breadcrumbs(client)}>
             <Head title={`Edit ${client.name}`} />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                <Heading title={`Edit ${client.name}`} description="Update client details and notification preferences." />
+                <Heading
+                    title={`Edit ${client.name}`}
+                    description="Update client details and notification preferences."
+                />
 
                 <div className="max-w-xl rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border">
                     <Form

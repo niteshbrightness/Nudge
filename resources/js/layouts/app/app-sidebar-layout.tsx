@@ -13,9 +13,13 @@ export default function AppSidebarLayout({ children, breadcrumbs = [] }: AppLayo
     const [visible, setVisible] = useState(true);
 
     useEffect(() => {
-        setVisible(true);
-        const t = setTimeout(() => setVisible(false), 4000);
-        return () => clearTimeout(t);
+        const t1 = setTimeout(() => setVisible(true), 0);
+        const t2 = setTimeout(() => setVisible(false), 4000);
+
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
     }, [flash]);
 
     return (
