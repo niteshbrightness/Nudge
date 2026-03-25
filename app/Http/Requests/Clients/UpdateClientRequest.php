@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Clients;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateClientRequest extends FormRequest
@@ -16,12 +15,15 @@ class UpdateClientRequest extends FormRequest
     }
 
     /**
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * {@inheritDoc}
      */
-    protected function prepareForValidation(): void
+    public function validationData(): array
     {
-        $this->merge([
-            'project_ids' => array_values(array_filter((array) $this->input('project_ids', []), fn ($v) => $v !== '')),
+        return array_merge(parent::validationData(), [
+            'project_ids' => array_values(array_filter(
+                (array) $this->input('project_ids', []),
+                fn ($v) => $v !== '' && $v !== null
+            )),
         ]);
     }
 

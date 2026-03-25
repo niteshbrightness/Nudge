@@ -74,7 +74,7 @@ class SendClientNotificationJob implements ShouldQueue
                     $description = $this->formatEventType($event->event_type);
                     $line = "• {$title}: {$description}";
 
-                    if (false && $event->short_url) { // TODO: remove false when we have a way to get the short url
+                    if ($event->short_url && config('notifications.include_short_urls', false)) {
                         $line .= "\n  {$event->short_url}";
                     }
 

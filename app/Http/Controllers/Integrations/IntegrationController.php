@@ -83,11 +83,9 @@ class IntegrationController extends Controller
         $maskedCredentials = [];
         foreach ($class::credentialFields() as $field) {
             $name = $field['name'];
-            if ($field['type'] === 'password' && ! empty($credentials[$name])) {
-                $maskedCredentials[$name] = '••••••••';
-            } else {
-                $maskedCredentials[$name] = $credentials[$name] ?? '';
-            }
+            // Mask all stored credential values — never expose secrets in page props.
+            // The update() method treats '••••••••' as "unchanged" and keeps the stored value.
+            $maskedCredentials[$name] = ! empty($credentials[$name]) ? '••••••••' : '';
         }
 
         return Inertia::render('integrations/setup', [

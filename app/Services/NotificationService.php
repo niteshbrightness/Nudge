@@ -10,7 +10,7 @@ use Throwable;
 
 class NotificationService
 {
-    private NotificationChannelInterface $channel;
+    private readonly NotificationChannelInterface $channel;
 
     public function __construct()
     {

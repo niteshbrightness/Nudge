@@ -1,4 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
+
+/** Decode HTML entities from Laravel's paginator labels (e.g. &laquo; → «). */
+function decodePaginationLabel(html: string): string {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    return doc.documentElement.textContent ?? html;
+}
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
@@ -16,15 +23,13 @@ export default function WebhooksIndex({ events }: { events: Paginator<WebhookEve
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Webhook Events" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                <Heading
-                    title="Webhook Events"
-                    description="Incoming events from ActiveCollab."
-                />
+                <Heading title="Webhook Events" description="Incoming events from ActiveCollab." />
 
                 <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
                     {events.data.length === 0 ? (
                         <p className="px-6 py-12 text-center text-sm text-muted-foreground">
-                            No webhook events received yet. Configure your ActiveCollab webhook endpoint to start receiving events.
+                            No webhook events received yet. Configure your ActiveCollab webhook endpoint to start
+                            receiving events.
                         </p>
                     ) : (
                         <table className="w-full text-sm">
@@ -62,9 +67,7 @@ export default function WebhooksIndex({ events }: { events: Paginator<WebhookEve
                                                 <span className="text-muted-foreground">—</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-3 text-xs text-muted-foreground">
-                                            {event.received_at}
-                                        </td>
+                                        <td className="px-6 py-3 text-xs text-muted-foreground">{event.received_at}</td>
                                         <td className="px-6 py-3 text-right">
                                             <Button variant="ghost" size="sm" asChild>
                                                 <Link href={show(event.id)}>View</Link>
@@ -88,9 +91,9 @@ export default function WebhooksIndex({ events }: { events: Paginator<WebhookEve
                                 asChild={!!link.url}
                             >
                                 {link.url ? (
-                                    <Link href={link.url} dangerouslySetInnerHTML={{ __html: link.label }} />
+                                    <Link href={link.url}>{decodePaginationLabel(link.label)}</Link>
                                 ) : (
-                                    <span dangerouslySetInnerHTML={{ __html: link.label }} />
+                                    <span>{decodePaginationLabel(link.label)}</span>
                                 )}
                             </Button>
                         ))}

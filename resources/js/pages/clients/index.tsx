@@ -1,4 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
+
+/** Decode HTML entities from Laravel's paginator labels (e.g. &laquo; → «). */
+function decodePaginationLabel(html: string): string {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    return doc.documentElement.textContent ?? html;
+}
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
@@ -88,9 +95,9 @@ export default function ClientsIndex({ clients }: { clients: Paginator<Client> }
                                 asChild={!!link.url}
                             >
                                 {link.url ? (
-                                    <Link href={link.url} dangerouslySetInnerHTML={{ __html: link.label }} />
+                                    <Link href={link.url}>{decodePaginationLabel(link.label)}</Link>
                                 ) : (
-                                    <span dangerouslySetInnerHTML={{ __html: link.label }} />
+                                    <span>{decodePaginationLabel(link.label)}</span>
                                 )}
                             </Button>
                         ))}

@@ -59,8 +59,19 @@ class ActiveCollabWebhookController extends Controller
             $project = $this->projectRepository->findByActivecollabId((int) $parsed['project_id']);
         }
 
+        $resolvedTenantId = $tenantId ?? $project?->tenant_id;
+
+        if (is_null($resolvedTenantId)) {
+            Log::warning('ActiveCollab webhook received but tenant could not be resolved', [
+                'ip' => $request->ip(),
+                'project_id' => $parsed['project_id'],
+            ]);
+
+            return response('Unprocessable', Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $this->webhookEventRepository->store([
-            'tenant_id' => $tenantId ?? $project?->tenant_id,
+            'tenant_id' => $resolvedTenantId,
             'project_id' => $project?->id,
             'event_type' => $parsed['event_type'],
             'raw_payload' => $payload,

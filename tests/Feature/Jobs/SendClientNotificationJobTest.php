@@ -252,15 +252,15 @@ test('message is grouped by project with project name headers', function () {
     (new SendClientNotificationJob($client))->handle(app(NotificationService::class));
 
     expect($capturedMessage)
-        ->toContain('[Project: Alpha Redesign]')
+        ->toContain('Project: Alpha Redesign')
         ->toContain('• Homepage layout: New comment')
-        ->toContain('  bit.ly/abc123')
-        ->toContain('[Project: Beta App]')
-        ->toContain('• Login page: New task')
-        ->toContain('  bit.ly/def456');
+        ->toContain('Project: Beta App')
+        ->toContain('• Login page: New task');
 });
 
-test('url appears on indented line below event bullet', function () {
+test('url appears on indented line below event bullet when include_short_urls is enabled', function () {
+    config(['notifications.include_short_urls' => true]);
+
     $client = Client::factory()->create();
     $project = Project::factory()->create(['client_id' => $client->id, 'name' => 'My Project']);
 

@@ -18,10 +18,7 @@ export default function WebhookEventShow({ event }: { event: WebhookEvent }) {
             <Head title={`Webhook Event #${event.id}`} />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <div className="flex items-center justify-between">
-                    <Heading
-                        title={`Event #${event.id}`}
-                        description={`Received ${event.received_at}`}
-                    />
+                    <Heading title={`Event #${event.id}`} description={`Received ${event.received_at}`} />
                     <span className="rounded-full bg-sidebar-accent px-3 py-1 text-sm font-medium">
                         {event.event_type}
                     </span>
@@ -29,19 +26,19 @@ export default function WebhookEventShow({ event }: { event: WebhookEvent }) {
 
                 <div className="grid gap-4 md:grid-cols-2">
                     <div className="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Project</p>
+                        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Project</p>
                         <p className="mt-1">
-                            {event.project ? (
+                            {event.project?.id ? (
                                 <Link href={`/projects/${event.project.id}`} className="hover:underline">
                                     {event.project.name}
                                 </Link>
                             ) : (
-                                <span className="italic text-muted-foreground">Unknown</span>
+                                <span className="text-muted-foreground italic">Unknown</span>
                             )}
                         </p>
                     </div>
                     <div className="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Short URL</p>
+                        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Short URL</p>
                         <p className="mt-1">
                             {event.short_url ? (
                                 <a
@@ -53,7 +50,7 @@ export default function WebhookEventShow({ event }: { event: WebhookEvent }) {
                                     {event.short_url}
                                 </a>
                             ) : (
-                                <span className="italic text-muted-foreground">—</span>
+                                <span className="text-muted-foreground italic">—</span>
                             )}
                         </p>
                     </div>
@@ -63,18 +60,14 @@ export default function WebhookEventShow({ event }: { event: WebhookEvent }) {
                     <div className="border-b border-sidebar-border/70 px-6 py-4 dark:border-sidebar-border">
                         <h2 className="font-medium">Parsed Data</h2>
                     </div>
-                    <pre className="overflow-auto px-6 py-4 text-xs">
-                        {JSON.stringify(event.parsed_data, null, 2)}
-                    </pre>
+                    <pre className="overflow-auto px-6 py-4 text-xs">{JSON.stringify(event.parsed_data, null, 2)}</pre>
                 </div>
 
                 <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
                     <div className="border-b border-sidebar-border/70 px-6 py-4 dark:border-sidebar-border">
                         <h2 className="font-medium">Raw Payload</h2>
                     </div>
-                    <pre className="overflow-auto px-6 py-4 text-xs">
-                        {JSON.stringify(event.raw_payload, null, 2)}
-                    </pre>
+                    <pre className="overflow-auto px-6 py-4 text-xs">{JSON.stringify(event.raw_payload, null, 2)}</pre>
                 </div>
 
                 <div>
