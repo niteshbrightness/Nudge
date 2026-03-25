@@ -27,13 +27,14 @@ class SendClientNotificationJob implements ShouldQueue
             return;
         }
 
-        $message = $this->buildMessage();
+        $since = $this->lastSuccessfulNotificationAt();
+        $message = $this->buildMessage($since);
 
         if (empty($message)) {
             return;
         }
 
-        $notificationService->send($this->client, $message);
+        $notificationService->send($this->client, $message, $since);
     }
 
     private function alreadySentRecently(): bool
@@ -45,10 +46,8 @@ class SendClientNotificationJob implements ShouldQueue
             ->exists();
     }
 
-    private function buildMessage(): string
+    private function buildMessage(CarbonImmutable $since): string
     {
-        $since = $this->lastSuccessfulNotificationAt();
-
         $recentEvents = WebhookEvent::query()
             ->with('project')
             ->whereIn('project_id', function ($query): void {
@@ -75,14 +74,14 @@ class SendClientNotificationJob implements ShouldQueue
                     $description = $this->formatEventType($event->event_type);
                     $line = "• {$title}: {$description}";
 
-                    if ($event->short_url) {
+                    if (false && $event->short_url) { // TODO: remove false when we have a way to get the short url
                         $line .= "\n  {$event->short_url}";
                     }
 
                     return $line;
                 });
 
-                return "[Project: {$projectName}]\n".$lines->implode("\n");
+                return "Project: {$projectName}\n".$lines->implode("\n");
             });
 
         return $sections->implode("\n\n");
@@ -109,7 +108,7 @@ class SendClientNotificationJob implements ShouldQueue
             ->first();
 
         if ($lastLog) {
-            return CarbonImmutable::parse($lastLog->sent_at);
+            return CarbonImmutable::parse($lastLog->queried_since ?? $lastLog->sent_at);
         }
 
         $maxLookbackDays = (int) config('notifications.max_lookback_days', 7);

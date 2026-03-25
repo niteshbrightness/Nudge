@@ -111,3 +111,28 @@ test('invalid project_id returns a validation error', function () {
         ->put(route('clients.update', $client), clientPayload(['project_ids' => [99999]]))
         ->assertSessionHasErrors('project_ids.0');
 });
+
+test('phone must be in E.164 format on update', function (string $phone) {
+    $user = User::factory()->create(['tenant_id' => 'test-tenant']);
+    $client = Client::factory()->create();
+
+    $this->actingAs($user)
+        ->put(route('clients.update', $client), clientPayload(['phone' => $phone]))
+        ->assertSessionHasErrors('phone');
+})->with([
+    'missing plus prefix' => '917096789000',
+    'letters in number' => '+1abc5550000',
+    'plus only' => '+',
+    'empty' => '',
+]);
+
+test('valid E.164 phone is accepted on update', function () {
+    $user = User::factory()->create(['tenant_id' => 'test-tenant']);
+    $client = Client::factory()->create();
+
+    $this->actingAs($user)
+        ->put(route('clients.update', $client), clientPayload(['phone' => '+917096789000']))
+        ->assertRedirect(route('clients.index'));
+
+    expect($client->fresh()->phone)->toBe('+917096789000');
+});

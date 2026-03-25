@@ -12,16 +12,23 @@ interface ProjectOption {
 interface ProjectMultiSelectProps {
     options: ProjectOption[];
     defaultSelected?: number[];
+    value?: number[];
     name?: string;
     placeholder?: string;
+    onChange?: (values: number[]) => void;
+    onBlur?: () => void;
 }
 
 export function ProjectMultiSelect({
     options,
     defaultSelected = [],
+    value,
     name = 'project_ids',
     placeholder = 'Select projects…',
+    onChange,
+    onBlur,
 }: ProjectMultiSelectProps) {
+    const isControlled = value !== undefined;
     const [selectedIds, setSelectedIds] = useState<number[]>(defaultSelected);
     const [search, setSearch] = useState('');
     const [isOpen, setIsOpen] = useState(false);
@@ -30,13 +37,23 @@ export function ProjectMultiSelect({
 
     const filtered = options.filter((o) => o.name.toLowerCase().includes(search.toLowerCase()));
 
+    const resolvedIds = isControlled ? (value ?? []) : selectedIds;
+
     const toggle = (id: number) => {
-        setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+        const next = resolvedIds.includes(id) ? resolvedIds.filter((x) => x !== id) : [...resolvedIds, id];
+        if (!isControlled) {
+            setSelectedIds(next);
+        }
+        onChange?.(next);
     };
 
     const remove = (id: number, e: React.MouseEvent) => {
         e.stopPropagation();
-        setSelectedIds((prev) => prev.filter((x) => x !== id));
+        const next = resolvedIds.filter((x) => x !== id);
+        if (!isControlled) {
+            setSelectedIds(next);
+        }
+        onChange?.(next);
     };
 
     useEffect(() => {
@@ -51,6 +68,7 @@ export function ProjectMultiSelect({
         const handleMouseDown = (e: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
                 setIsOpen(false);
+                onBlur?.();
             }
         };
 
@@ -71,13 +89,13 @@ export function ProjectMultiSelect({
         };
     }, [isOpen]);
 
-    const selectedOptions = options.filter((o) => selectedIds.includes(o.id));
+    const selectedOptions = options.filter((o) => resolvedIds.includes(o.id));
 
     return (
         <div ref={containerRef} className="relative">
             {/* Hidden inputs for form submission */}
-            {selectedIds.length > 0 ? (
-                selectedIds.map((id) => <input key={id} type="hidden" name={`${name}[]`} value={id} />)
+            {resolvedIds.length > 0 ? (
+                resolvedIds.map((id) => <input key={id} type="hidden" name={`${name}[]`} value={id} />)
             ) : (
                 <input type="hidden" name={name} value="" />
             )}
@@ -143,19 +161,19 @@ export function ProjectMultiSelect({
                                 <li
                                     key={o.id}
                                     role="option"
-                                    aria-selected={selectedIds.includes(o.id)}
+                                    aria-selected={resolvedIds.includes(o.id)}
                                     onClick={() => toggle(o.id)}
                                     className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
                                 >
                                     <span
                                         className={cn(
                                             'flex size-4 shrink-0 items-center justify-center rounded-sm border border-primary',
-                                            selectedIds.includes(o.id)
+                                            resolvedIds.includes(o.id)
                                                 ? 'bg-primary text-primary-foreground'
                                                 : 'opacity-50',
                                         )}
                                     >
-                                        {selectedIds.includes(o.id) && (
+                                        {resolvedIds.includes(o.id) && (
                                             <svg viewBox="0 0 12 12" className="size-3 fill-current" aria-hidden>
                                                 <path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>

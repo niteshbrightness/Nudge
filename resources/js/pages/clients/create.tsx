@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Form } from '@inertiajs/react';
+import { useForm } from 'laravel-precognition-react-inertia';
 import ClientController from '@/actions/App/Http/Controllers/Clients/ClientController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ProjectMultiSelect } from '@/components/ui/project-multi-select';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TimezoneSelect } from '@/components/ui/timezone-select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { create, index } from '@/routes/clients';
@@ -26,6 +26,19 @@ export default function CreateClient({
     timezones: Timezone[];
     availableProjects: Array<{ id: number; name: string }>;
 }) {
+    const form = useForm('post', ClientController.store().url, {
+        name: '',
+        phone: '',
+        timezone_id: null as number | null,
+        notes: '',
+        project_ids: [] as number[],
+    });
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        form.submit();
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Add Client" />
@@ -33,64 +46,80 @@ export default function CreateClient({
                 <Heading title="Add Client" description="Create a new client to receive project notifications." />
 
                 <div className="max-w-xl rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border">
-                    <Form {...ClientController.store.form()} className="space-y-5">
-                        {({ errors, processing }) => (
-                            <>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="name">Name</Label>
-                                    <Input id="name" name="name" placeholder="Company or person name" required />
-                                    <InputError message={errors.name} />
-                                </div>
+                    <form onSubmit={submit} className="space-y-5">
+                        <div className="grid gap-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input
+                                id="name"
+                                value={form.data.name}
+                                onChange={(e) => form.setData('name', e.target.value)}
+                                onBlur={() => form.validate('name')}
+                                placeholder="Company or person name"
+                            />
+                            <InputError message={form.errors.name} />
+                        </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="phone">Phone number</Label>
-                                    <Input id="phone" name="phone" type="tel" placeholder="+1 555 000 0000" required />
-                                    <InputError message={errors.phone} />
-                                </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="phone">Phone number</Label>
+                            <Input
+                                id="phone"
+                                type="tel"
+                                value={form.data.phone}
+                                onChange={(e) => form.setData('phone', e.target.value)}
+                                onBlur={() => form.validate('phone')}
+                                placeholder="+917096789000"
+                            />
+                            <p className="text-sm text-muted-foreground">
+                                Must include + and country code, e.g. +917096789000
+                            </p>
+                            <InputError message={form.errors.phone} />
+                        </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="timezone_id">Timezone</Label>
-                                    <Select name="timezone_id" required>
-                                        <SelectTrigger id="timezone_id">
-                                            <SelectValue placeholder="Select timezone" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {timezones.map((tz) => (
-                                                <SelectItem key={tz.id} value={String(tz.id)}>
-                                                    {tz.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <InputError message={errors.timezone_id} />
-                                </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="timezone_id">Timezone</Label>
+                            <TimezoneSelect
+                                options={timezones}
+                                value={form.data.timezone_id}
+                                onChange={(val) => form.setData('timezone_id', val)}
+                                onBlur={() => form.validate('timezone_id')}
+                                placeholder="Select timezone"
+                            />
+                            <InputError message={form.errors.timezone_id} />
+                        </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="notes">Notes (optional)</Label>
-                                    <Input id="notes" name="notes" placeholder="Any additional context" />
-                                    <InputError message={errors.notes} />
-                                </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="notes">Notes (optional)</Label>
+                            <Input
+                                id="notes"
+                                value={form.data.notes}
+                                onChange={(e) => form.setData('notes', e.target.value)}
+                                onBlur={() => form.validate('notes')}
+                                placeholder="Any additional context"
+                            />
+                            <InputError message={form.errors.notes} />
+                        </div>
 
-                                <div className="grid gap-2">
-                                    <Label>Projects (optional)</Label>
-                                    <ProjectMultiSelect
-                                        options={availableProjects}
-                                        placeholder="Search and assign projects…"
-                                    />
-                                    <InputError message={errors['project_ids']} />
-                                </div>
+                        <div className="grid gap-2">
+                            <Label>Projects (optional)</Label>
+                            <ProjectMultiSelect
+                                options={availableProjects}
+                                value={form.data.project_ids}
+                                onChange={(vals) => form.setData('project_ids', vals)}
+                                onBlur={() => form.validate('project_ids')}
+                                placeholder="Search and assign projects…"
+                            />
+                            <InputError message={form.errors.project_ids} />
+                        </div>
 
-                                <div className="flex gap-3">
-                                    <Button type="submit" disabled={processing}>
-                                        {processing ? 'Saving…' : 'Add Client'}
-                                    </Button>
-                                    <Button variant="ghost" asChild>
-                                        <a href={index()}>Cancel</a>
-                                    </Button>
-                                </div>
-                            </>
-                        )}
-                    </Form>
+                        <div className="flex gap-3">
+                            <Button type="submit" disabled={form.processing}>
+                                {form.processing ? 'Saving…' : 'Add Client'}
+                            </Button>
+                            <Button variant="ghost" asChild>
+                                <a href={index()}>Cancel</a>
+                            </Button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </AppLayout>

@@ -17,7 +17,7 @@ class NotificationService
         $this->channel = $this->resolveChannel();
     }
 
-    public function send(Client $client, string $message): void
+    public function send(Client $client, string $message, ?\DateTimeInterface $queriedSince = null): void
     {
         $channelName = config('notifications.channel', 'twilio');
 
@@ -31,6 +31,7 @@ class NotificationService
                 'message' => $message,
                 'status' => 'sent',
                 'sent_at' => now(),
+                'queried_since' => $queriedSince,
             ]);
         } catch (Throwable $e) {
             Log::error('Notification send failed', [
@@ -47,6 +48,7 @@ class NotificationService
                 'status' => 'failed',
                 'error_message' => $e->getMessage(),
                 'sent_at' => now(),
+                'queried_since' => $queriedSince,
             ]);
         }
     }
