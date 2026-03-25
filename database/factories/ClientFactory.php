@@ -23,6 +23,7 @@ class ClientFactory extends Factory
             'phone' => fake()->e164PhoneNumber(),
             'timezone_id' => Timezone::inRandomOrder()->first()?->id ?? 1,
             'notes' => fake()->optional()->sentence(),
+            'is_active' => true,
         ];
     }
 }

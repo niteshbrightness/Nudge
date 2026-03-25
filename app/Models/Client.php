@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
-#[Fillable(['tenant_id', 'name', 'phone', 'timezone_id', 'notes'])]
+#[Fillable(['tenant_id', 'name', 'phone', 'timezone_id', 'notes', 'is_active'])]
 class Client extends Model
 {
     /** @use HasFactory<ClientFactory> */

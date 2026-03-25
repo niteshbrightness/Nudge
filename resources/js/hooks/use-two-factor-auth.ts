@@ -50,9 +50,7 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
 
     const fetchSetupKey = async (): Promise<void> => {
         try {
-            const { secretKey: key } = await fetchJson<TwoFactorSecretKey>(
-                secretKey.url(),
-            );
+            const { secretKey: key } = await fetchJson<TwoFactorSecretKey>(secretKey.url());
             setManualSetupKey(key);
         } catch {
             setErrors((prev) => [...prev, 'Failed to fetch a setup key']);
@@ -82,13 +80,10 @@ export const useTwoFactorAuth = (): UseTwoFactorAuthReturn => {
     };
 
     const fetchSetupData = async (): Promise<void> => {
-        try {
-            clearErrors();
-            await Promise.all([fetchQrCode(), fetchSetupKey()]);
-        } catch {
-            setQrCodeSvg(null);
-            setManualSetupKey(null);
-        }
+        clearErrors();
+        // Use allSettled so one failure doesn't discard the other result.
+        // Individual fetch functions already set their own error state.
+        await Promise.allSettled([fetchQrCode(), fetchSetupKey()]);
     };
 
     return {

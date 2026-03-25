@@ -26,7 +26,7 @@ class SendScheduledNotifications extends Command
 
         $now = CarbonImmutable::now('UTC');
 
-        $clients = Client::query()->with(['timezone'])->get();
+        $clients = Client::query()->with(['timezone'])->where('is_active', true)->get();
 
         $dispatched = 0;
 
@@ -38,12 +38,13 @@ class SendScheduledNotifications extends Command
             $localTime = $now->setTimezone($client->timezone->name);
 
             $shouldNotify = collect($slots)->contains(function (string $slot) use ($localTime): bool {
-                [$slotHour, $slotMinute] = array_map('intval', explode(':', $slot));
+                $slotTime = $localTime->setTimeFromTimeString($slot);
+                $diffMinutes = abs($localTime->diffInMinutes($slotTime));
 
-                $slotMinutes = $slotHour * 60 + $slotMinute;
-                $currentMinutes = (int) $localTime->format('G') * 60 + (int) $localTime->format('i');
+                // Handle midnight wraparound: 23:58 vs 00:02 is 4 minutes apart, not 1436.
+                $diffMinutes = min($diffMinutes, 1440 - $diffMinutes);
 
-                return abs($currentMinutes - $slotMinutes) < 15;
+                return $localTime->gte($slotTime) && $diffMinutes <= 5;
             });
 
             if (! $shouldNotify) {

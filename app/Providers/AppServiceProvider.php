@@ -7,6 +7,7 @@ use App\Contracts\Repositories\IntegrationRepositoryInterface;
 use App\Contracts\Repositories\ProjectRepositoryInterface;
 use App\Contracts\Repositories\WebhookEventRepositoryInterface;
 use App\Integrations\ActiveCollabIntegration;
+use App\ProjectSync\Sources\ActiveCollabSource;
 use App\Repositories\ClientRepository;
 use App\Repositories\IntegrationRepository;
 use App\Repositories\ProjectRepository;
@@ -16,6 +17,7 @@ use App\Services\BitlyService;
 use App\Services\IntegrationManager;
 use App\Services\Notifications\TwilioChannel;
 use App\Services\NotificationService;
+use App\Services\ProjectSyncManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -45,6 +47,13 @@ class AppServiceProvider extends ServiceProvider
             accessToken: config('services.bitly.access_token', ''),
             apiUrl: config('services.bitly.api_url', 'https://api-ssl.bitly.com/v4'),
         ));
+
+        $this->app->singleton(ProjectSyncManager::class, function (): ProjectSyncManager {
+            $manager = new ProjectSyncManager;
+            $manager->register($this->app->make(ActiveCollabSource::class));
+
+            return $manager;
+        });
 
         $this->app->bind(ActiveCollabService::class, function (): ActiveCollabService {
             /** @var IntegrationManager $manager */

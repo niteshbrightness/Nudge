@@ -48,8 +48,8 @@ class ActiveCollabIntegration extends AbstractIntegration
                 'name' => 'webhook_secret',
                 'label' => 'Webhook Secret',
                 'type' => 'password',
-                'required' => false,
-                'hint' => 'Optional — used to verify webhook signatures.',
+                'required' => true,
+                'hint' => 'Required — used to verify that incoming webhooks are from ActiveCollab. Set the same value in ActiveCollab under Admin → Webhooks.',
             ],
         ];
     }
@@ -61,7 +61,7 @@ class ActiveCollabIntegration extends AbstractIntegration
             'Go to Admin → API → Token Generator.',
             'Enter a token name (e.g. "Nudge") and click Generate.',
             'Copy the generated token and paste it into the API Token field above.',
-            'Optionally set a Webhook Secret to verify payload authenticity.',
+            'Set a Webhook Secret and enter the same value in ActiveCollab under Admin → Webhooks to verify payload authenticity.',
             'After saving, copy the Webhook URL shown below and add it in ActiveCollab under Admin → Webhooks.',
         ];
     }

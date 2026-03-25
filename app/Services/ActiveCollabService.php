@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ActiveCollabService
 {
@@ -22,7 +23,7 @@ class ActiveCollabService
         if (empty($this->baseUrl) || empty($this->token)) {
             throw new RuntimeException('ActiveCollab is not connected. Please configure it in Integrations.');
         }
-        logger()->info("{$this->baseUrl}/api/v1/projects");
+        Log::debug('ActiveCollab: fetching projects', ['url' => $this->baseUrl]);
         $response = Http::withToken($this->token)
             ->get("{$this->baseUrl}/api/v1/projects")
             ->throw();
@@ -74,6 +75,11 @@ class ActiveCollabService
         return "{$this->baseUrl}/projects/{$projectId}";
     }
 
+    public function isConfigured(): bool
+    {
+        return ! empty($this->baseUrl) && ! empty($this->token);
+    }
+
     public function getWebhookSecret(): string
     {
         return $this->webhookSecret;
@@ -81,11 +87,14 @@ class ActiveCollabService
 
     /**
      * Verify the webhook signature from ActiveCollab.
+     *
+     * Returns false when the secret is empty — an unconfigured secret must
+     * never be treated as verified, since that would allow arbitrary payloads.
      */
     public function verifySignature(string $payload, string $signature, string $secret): bool
     {
         if (empty($secret)) {
-            return true;
+            return false;
         }
 
         $expected = hash_hmac('sha256', $payload, $secret);

@@ -18,7 +18,8 @@ class ProjectFactory extends Factory
     public function definition(): array
     {
         return [
-            'activecollab_id' => fake()->optional()->randomNumber(6),
+            'source' => 'activecollab',
+            'external_id' => fake()->optional()->randomNumber(6),
             'name' => fake()->words(3, true),
             'description' => fake()->optional()->paragraph(),
             'status' => fake()->randomElement(['active', 'completed', 'on_hold']),
