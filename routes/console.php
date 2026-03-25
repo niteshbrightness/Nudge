@@ -12,3 +12,5 @@ Schedule::command('nudge:send-notifications')
     ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground();
+
+Schedule::command('queue:work --stop-when-empty')->everyMinute()->withoutOverlapping(); // This should be not push on live
