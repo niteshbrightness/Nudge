@@ -33,11 +33,11 @@ test('guests are redirected to login', function () {
 
 test('can assign a client to a project', function () {
     $user = User::factory()->create(['tenant_id' => 'test-tenant']);
-    $project = Project::factory()->create(['client_id' => null]);
+    $project = Project::factory()->create(['client_id' => null, 'status' => 'active']);
     $client = Client::factory()->create();
 
     $this->actingAs($user)
-        ->put(route('projects.update', $project), ['client_id' => $client->id])
+        ->put(route('projects.update', $project), ['client_id' => $client->id, 'status' => 'active'])
         ->assertRedirect(route('projects.show', $project));
 
     expect($project->fresh()->client_id)->toBe($client->id);
@@ -46,13 +46,33 @@ test('can assign a client to a project', function () {
 test('can unassign a client from a project', function () {
     $user = User::factory()->create(['tenant_id' => 'test-tenant']);
     $client = Client::factory()->create();
-    $project = Project::factory()->create(['client_id' => $client->id]);
+    $project = Project::factory()->create(['client_id' => $client->id, 'status' => 'active']);
 
     $this->actingAs($user)
-        ->put(route('projects.update', $project), ['client_id' => null])
+        ->put(route('projects.update', $project), ['client_id' => null, 'status' => 'active'])
         ->assertRedirect(route('projects.show', $project));
 
     expect($project->fresh()->client_id)->toBeNull();
+});
+
+test('can update project status', function () {
+    $user = User::factory()->create(['tenant_id' => 'test-tenant']);
+    $project = Project::factory()->create(['status' => 'active']);
+
+    $this->actingAs($user)
+        ->put(route('projects.update', $project), ['client_id' => null, 'status' => 'on_hold'])
+        ->assertRedirect(route('projects.show', $project));
+
+    expect($project->fresh()->status)->toBe('on_hold');
+});
+
+test('invalid status returns a validation error', function () {
+    $user = User::factory()->create(['tenant_id' => 'test-tenant']);
+    $project = Project::factory()->create();
+
+    $this->actingAs($user)
+        ->put(route('projects.update', $project), ['client_id' => null, 'status' => 'invalid_status'])
+        ->assertSessionHasErrors('status');
 });
 
 test('invalid client_id returns a validation error', function () {
@@ -60,6 +80,6 @@ test('invalid client_id returns a validation error', function () {
     $project = Project::factory()->create();
 
     $this->actingAs($user)
-        ->put(route('projects.update', $project), ['client_id' => 99999])
+        ->put(route('projects.update', $project), ['client_id' => 99999, 'status' => 'active'])
         ->assertSessionHasErrors('client_id');
 });

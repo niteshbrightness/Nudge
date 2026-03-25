@@ -31,7 +31,7 @@ afterEach(function () {
 
 test('sends notification with events since last successful log', function () {
     $client = Client::factory()->create();
-    $project = Project::factory()->create(['client_id' => $client->id]);
+    $project = Project::factory()->create(['client_id' => $client->id, 'status' => 'active']);
 
     $lastSentAt = now()->subHours(3);
 
@@ -71,7 +71,7 @@ test('uses max_lookback_days fallback when no prior log exists', function () {
     config(['notifications.max_lookback_days' => 3]);
 
     $client = Client::factory()->create();
-    $project = Project::factory()->create(['client_id' => $client->id]);
+    $project = Project::factory()->create(['client_id' => $client->id, 'status' => 'active']);
 
     // Event within 3-day lookback — SHOULD appear
     WebhookEvent::factory()->create([
@@ -98,7 +98,7 @@ test('uses max_lookback_days fallback when no prior log exists', function () {
 
 test('skips send when no new events exist since last notification', function () {
     $client = Client::factory()->create();
-    $project = Project::factory()->create(['client_id' => $client->id]);
+    $project = Project::factory()->create(['client_id' => $client->id, 'status' => 'active']);
 
     NotificationLog::create([
         'tenant_id' => 'test-tenant',
@@ -124,7 +124,7 @@ test('skips send when no new events exist since last notification', function () 
 
 test('deduplication guard prevents sending when already sent within 60 minutes', function () {
     $client = Client::factory()->create();
-    $project = Project::factory()->create(['client_id' => $client->id]);
+    $project = Project::factory()->create(['client_id' => $client->id, 'status' => 'active']);
 
     NotificationLog::create([
         'tenant_id' => 'test-tenant',
@@ -149,7 +149,7 @@ test('deduplication guard prevents sending when already sent within 60 minutes',
 
 test('ignores failed logs when determining last sent time', function () {
     $client = Client::factory()->create();
-    $project = Project::factory()->create(['client_id' => $client->id]);
+    $project = Project::factory()->create(['client_id' => $client->id, 'status' => 'active']);
 
     $lastSuccessAt = now()->subHours(5);
 
@@ -192,7 +192,7 @@ test('ignores failed logs when determining last sent time', function () {
 
 test('includes up to 10 most recent events', function () {
     $client = Client::factory()->create();
-    $project = Project::factory()->create(['client_id' => $client->id]);
+    $project = Project::factory()->create(['client_id' => $client->id, 'status' => 'active']);
 
     WebhookEvent::factory()->count(12)->create([
         'project_id' => $project->id,
@@ -218,8 +218,8 @@ test('includes up to 10 most recent events', function () {
 
 test('message is grouped by project with project name headers', function () {
     $client = Client::factory()->create();
-    $projectA = Project::factory()->create(['client_id' => $client->id, 'name' => 'Alpha Redesign']);
-    $projectB = Project::factory()->create(['client_id' => $client->id, 'name' => 'Beta App']);
+    $projectA = Project::factory()->create(['client_id' => $client->id, 'name' => 'Alpha Redesign', 'status' => 'active']);
+    $projectB = Project::factory()->create(['client_id' => $client->id, 'name' => 'Beta App', 'status' => 'active']);
 
     WebhookEvent::factory()->create([
         'project_id' => $projectA->id,
@@ -262,7 +262,7 @@ test('url appears on indented line below event bullet when include_short_urls is
     config(['notifications.include_short_urls' => true]);
 
     $client = Client::factory()->create();
-    $project = Project::factory()->create(['client_id' => $client->id, 'name' => 'My Project']);
+    $project = Project::factory()->create(['client_id' => $client->id, 'name' => 'My Project', 'status' => 'active']);
 
     WebhookEvent::factory()->create([
         'project_id' => $project->id,
@@ -287,4 +287,44 @@ test('url appears on indented line below event bullet when include_short_urls is
     (new SendClientNotificationJob($client))->handle(app(NotificationService::class));
 
     expect($capturedMessage)->toContain("• Some task: Updated\n  bit.ly/xyz789");
+});
+
+test('skips events from on_hold projects', function () {
+    $client = Client::factory()->create();
+    Project::factory()->create(['client_id' => $client->id, 'status' => 'on_hold', 'name' => 'Paused Project']);
+    $activeProject = Project::factory()->create(['client_id' => $client->id, 'status' => 'active', 'name' => 'Live Project']);
+
+    WebhookEvent::factory()->create([
+        'project_id' => $activeProject->id,
+        'parsed_data' => ['title' => 'Active task'],
+        'received_at' => now()->subHour(),
+    ]);
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(fn ($c, string $message) => str_contains($message, 'Active task') && ! str_contains($message, 'Paused Project'));
+    });
+
+    (new SendClientNotificationJob($client))->handle(app(NotificationService::class));
+});
+
+test('skips events from completed projects', function () {
+    $client = Client::factory()->create();
+    Project::factory()->create(['client_id' => $client->id, 'status' => 'completed', 'name' => 'Done Project']);
+    $activeProject = Project::factory()->create(['client_id' => $client->id, 'status' => 'active', 'name' => 'Live Project']);
+
+    WebhookEvent::factory()->create([
+        'project_id' => $activeProject->id,
+        'parsed_data' => ['title' => 'Active task'],
+        'received_at' => now()->subHour(),
+    ]);
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(fn ($c, string $message) => str_contains($message, 'Active task') && ! str_contains($message, 'Done Project'));
+    });
+
+    (new SendClientNotificationJob($client))->handle(app(NotificationService::class));
 });

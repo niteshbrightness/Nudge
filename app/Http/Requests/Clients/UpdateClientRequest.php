@@ -24,6 +24,7 @@ class UpdateClientRequest extends FormRequest
                 (array) $this->input('project_ids', []),
                 fn ($v) => $v !== '' && $v !== null
             )),
+            'is_active' => filter_var($this->input('is_active', 'true'), FILTER_VALIDATE_BOOLEAN),
         ]);
     }
 
@@ -34,6 +35,7 @@ class UpdateClientRequest extends FormRequest
             'phone' => ['required', 'string', 'regex:/^\+[1-9]\d{1,14}$/'],
             'timezone_id' => ['required', 'integer', 'exists:timezones,id'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'is_active' => ['required', 'boolean'],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['integer', 'exists:projects,id'],
         ];
@@ -45,7 +47,7 @@ class UpdateClientRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.regex' => 'Phone number must be in E.164 format (e.g. +917096789000).',
+            'phone.regex' => 'Phone number must be in E.164 format (e.g. +17096789000).',
             'timezone_id.exists' => 'The selected timezone is invalid.',
             'project_ids.*.exists' => 'One or more selected projects are invalid.',
         ];

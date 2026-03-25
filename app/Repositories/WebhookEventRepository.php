@@ -9,12 +9,15 @@ use Illuminate\Database\Eloquent\Collection;
 
 class WebhookEventRepository implements WebhookEventRepositoryInterface
 {
-    public function paginate(int $perPage = 20): LengthAwarePaginator
+    public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator
     {
         return WebhookEvent::query()
             ->with('project')
+            ->when($filters['search'] ?? null, fn ($q, $search) => $q->where('event_type', 'like', "%{$search}%"))
+            ->when($filters['project_id'] ?? null, fn ($q, $projectId) => $q->where('project_id', $projectId))
             ->latest('received_at')
-            ->paginate($perPage);
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     public function find(int $id): WebhookEvent

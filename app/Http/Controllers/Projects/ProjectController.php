@@ -9,6 +9,7 @@ use App\Models\Client;
 use App\Models\Project;
 use App\Services\ActiveCollabService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,10 +20,12 @@ class ProjectController extends Controller
         private readonly ActiveCollabService $activeCollabService,
     ) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
         return Inertia::render('projects/index', [
-            'projects' => $this->projects->paginate(),
+            'projects' => $this->projects->paginate(15, $request->only(['search', 'status', 'client_id'])),
+            'filters' => $request->only(['search', 'status', 'client_id']),
+            'clients' => Client::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -43,9 +46,12 @@ class ProjectController extends Controller
 
     public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
     {
-        $this->projects->update($project, ['client_id' => $request->client_id]);
+        $this->projects->update($project, [
+            'client_id' => $request->client_id,
+            'status' => $request->status,
+        ]);
 
-        return redirect()->route('projects.show', $project)->with('success', 'Client assigned successfully.');
+        return redirect()->route('projects.show', $project)->with('success', 'Project updated successfully.');
     }
 
     public function sync(): RedirectResponse

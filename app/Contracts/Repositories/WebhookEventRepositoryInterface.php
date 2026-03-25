@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Collection;
 
 interface WebhookEventRepositoryInterface
 {
-    public function paginate(int $perPage = 20): LengthAwarePaginator;
+    /** @param array<string, mixed> $filters */
+    public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator;
 
     public function find(int $id): WebhookEvent;
 

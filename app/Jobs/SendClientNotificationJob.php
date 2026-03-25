@@ -53,7 +53,8 @@ class SendClientNotificationJob implements ShouldQueue
             ->whereIn('project_id', function ($query): void {
                 $query->select('id')
                     ->from('projects')
-                    ->where('client_id', $this->client->id);
+                    ->where('client_id', $this->client->id)
+                    ->where('status', 'active');
             })
             ->where('received_at', '>=', $since)
             ->latest('received_at')

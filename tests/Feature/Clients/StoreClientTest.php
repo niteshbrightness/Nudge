@@ -55,7 +55,7 @@ test('phone must be in E.164 format on store', function (string $phone) {
         ->post(route('clients.store'), storeClientPayload(['phone' => $phone]))
         ->assertSessionHasErrors('phone');
 })->with([
-    'missing plus prefix' => '917096789000',
+    'missing plus prefix' => '17096789000',
     'letters in number' => '+1abc5550000',
     'plus only' => '+',
     'empty' => '',
@@ -65,8 +65,8 @@ test('valid E.164 phone is accepted on store', function () {
     $user = User::factory()->create(['tenant_id' => 'test-tenant']);
 
     $this->actingAs($user)
-        ->post(route('clients.store'), storeClientPayload(['phone' => '+917096789000']))
+        ->post(route('clients.store'), storeClientPayload(['phone' => '+17096789000']))
         ->assertRedirect(route('clients.index'));
 
-    expect(Client::where('phone', '+917096789000')->exists())->toBeTrue();
+    expect(Client::where('phone', '+17096789000')->exists())->toBeTrue();
 });

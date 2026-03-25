@@ -10,13 +10,16 @@ use Illuminate\Support\Facades\DB;
 
 class ClientRepository implements ClientRepositoryInterface
 {
-    public function paginate(int $perPage = 15): LengthAwarePaginator
+    public function paginate(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return Client::query()
             ->with('timezone')
             ->withCount('projects')
+            ->when($filters['search'] ?? null, fn ($q, $search) => $q->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%")))
+            ->when($filters['project_id'] ?? null, fn ($q, $projectId) => $q->whereHas('projects', fn ($q) => $q->where('id', $projectId)))
             ->latest()
-            ->paginate($perPage);
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     public function find(int $id): Client

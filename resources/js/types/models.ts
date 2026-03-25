@@ -13,6 +13,7 @@ export interface Client {
     phone: string;
     timezone_id: number;
     notes: string | null;
+    is_active: boolean;
     timezone?: Timezone;
     projects?: Project[];
     created_at: string;

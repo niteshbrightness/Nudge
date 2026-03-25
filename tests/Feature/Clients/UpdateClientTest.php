@@ -120,7 +120,7 @@ test('phone must be in E.164 format on update', function (string $phone) {
         ->put(route('clients.update', $client), clientPayload(['phone' => $phone]))
         ->assertSessionHasErrors('phone');
 })->with([
-    'missing plus prefix' => '917096789000',
+    'missing plus prefix' => '17096789000',
     'letters in number' => '+1abc5550000',
     'plus only' => '+',
     'empty' => '',
@@ -131,8 +131,8 @@ test('valid E.164 phone is accepted on update', function () {
     $client = Client::factory()->create();
 
     $this->actingAs($user)
-        ->put(route('clients.update', $client), clientPayload(['phone' => '+917096789000']))
+        ->put(route('clients.update', $client), clientPayload(['phone' => '+17096789000']))
         ->assertRedirect(route('clients.index'));
 
-    expect($client->fresh()->phone)->toBe('+917096789000');
+    expect($client->fresh()->phone)->toBe('+17096789000');
 });

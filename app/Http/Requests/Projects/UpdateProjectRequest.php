@@ -29,6 +29,7 @@ class UpdateProjectRequest extends FormRequest
     {
         return [
             'client_id' => ['nullable', 'integer', 'exists:clients,id'],
+            'status' => ['required', 'string', 'in:active,completed,on_hold'],
         ];
     }
 
@@ -39,6 +40,7 @@ class UpdateProjectRequest extends FormRequest
     {
         return [
             'client_id.exists' => 'The selected client is invalid.',
+            'status.in' => 'The selected status is invalid.',
         ];
     }
 }
