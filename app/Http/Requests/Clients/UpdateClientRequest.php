@@ -29,7 +29,7 @@ class UpdateClientRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'regex:/^\+[1-9]\d{1,14}$/'],
             'timezone_id' => ['required', 'integer', 'exists:timezones,id'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'project_ids' => ['nullable', 'array'],
@@ -43,6 +43,7 @@ class UpdateClientRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'phone.regex' => 'Phone number must be in E.164 format (e.g. +917096789000).',
             'timezone_id.exists' => 'The selected timezone is invalid.',
             'project_ids.*.exists' => 'One or more selected projects are invalid.',
         ];
