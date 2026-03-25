@@ -90,13 +90,15 @@ class SendClientNotificationJob implements ShouldQueue
 
     private function formatEventType(string $eventType): string
     {
-        return match ($eventType) {
+        $normalized = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $eventType));
+
+        return match ($normalized) {
             'task_created' => 'New task',
             'task_updated' => 'Updated',
             'task_completed' => 'Completed',
             'comment_created' => 'New comment',
             'project_updated' => 'Updated',
-            default => ucwords(str_replace('_', ' ', $eventType)),
+            default => ucwords(str_replace('_', ' ', $normalized)),
         };
     }
 
@@ -109,7 +111,7 @@ class SendClientNotificationJob implements ShouldQueue
             ->first();
 
         if ($lastLog) {
-            return CarbonImmutable::parse($lastLog->queried_since ?? $lastLog->sent_at);
+            return CarbonImmutable::parse($lastLog->sent_at);
         }
 
         $maxLookbackDays = (int) config('notifications.max_lookback_days', 7);

@@ -147,6 +147,47 @@ test('deduplication guard prevents sending when already sent within 60 minutes',
     (new SendClientNotificationJob($client))->handle(app(NotificationService::class));
 });
 
+test('uses sent_at not queried_since as cutoff for next notification', function () {
+    $client = Client::factory()->create();
+    $project = Project::factory()->create(['client_id' => $client->id, 'status' => 'active']);
+
+    $sentAt = now()->subHours(2);
+
+    // Previous log with queried_since pointing far back — should NOT be used as cutoff
+    NotificationLog::create([
+        'tenant_id' => 'test-tenant',
+        'client_id' => $client->id,
+        'channel' => 'twilio',
+        'message' => 'Old summary',
+        'status' => 'sent',
+        'sent_at' => $sentAt,
+        'queried_since' => now()->subDays(7),
+    ]);
+
+    // Old event within queried_since window but before sent_at — should NOT appear
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'Old event'],
+        'received_at' => now()->subDays(3),
+    ]);
+
+    // New event after sent_at — SHOULD appear
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'New event after last send'],
+        'event_type' => 'task_created',
+        'received_at' => now()->subHour(),
+    ]);
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(fn ($c, string $message) => str_contains($message, 'New event after last send') && ! str_contains($message, 'Old event'));
+    });
+
+    (new SendClientNotificationJob($client))->handle(app(NotificationService::class));
+});
+
 test('ignores failed logs when determining last sent time', function () {
     $client = Client::factory()->create();
     $project = Project::factory()->create(['client_id' => $client->id, 'status' => 'active']);
@@ -224,7 +265,7 @@ test('message is grouped by project with project name headers', function () {
     WebhookEvent::factory()->create([
         'project_id' => $projectA->id,
         'parsed_data' => ['title' => 'Homepage layout'],
-        'event_type' => 'comment_created',
+        'event_type' => 'CommentCreated',
         'short_url' => 'bit.ly/abc123',
         'received_at' => now()->subHour(),
     ]);
@@ -232,7 +273,7 @@ test('message is grouped by project with project name headers', function () {
     WebhookEvent::factory()->create([
         'project_id' => $projectB->id,
         'parsed_data' => ['title' => 'Login page'],
-        'event_type' => 'task_created',
+        'event_type' => 'TaskCreated',
         'short_url' => 'bit.ly/def456',
         'received_at' => now()->subHour(),
     ]);
