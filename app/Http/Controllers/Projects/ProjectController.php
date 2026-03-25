@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Projects\UpdateProjectRequest;
 use App\Models\Client;
 use App\Models\Project;
-use App\Services\ActiveCollabService;
+use App\Services\ProjectSyncManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,14 +17,19 @@ class ProjectController extends Controller
 {
     public function __construct(
         private readonly ProjectRepositoryInterface $projects,
-        private readonly ActiveCollabService $activeCollabService,
+        private readonly ProjectSyncManager $syncManager,
     ) {}
 
     public function index(Request $request): Response
     {
+        $filters = array_merge(
+            ['status' => 'active'],
+            $request->only(['search', 'status', 'client_id', 'sort_by', 'sort_dir']),
+        );
+
         return Inertia::render('projects/index', [
-            'projects' => $this->projects->paginate(15, $request->only(['search', 'status', 'client_id'])),
-            'filters' => $request->only(['search', 'status', 'client_id']),
+            'projects' => $this->projects->paginate(15, $filters),
+            'filters' => $filters,
             'clients' => Client::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -56,22 +61,33 @@ class ProjectController extends Controller
 
     public function sync(): RedirectResponse
     {
-        try {
-            $activecollabProjects = $this->activeCollabService->fetchProjects();
-        } catch (\Throwable $e) {
-            return redirect()->route('projects.index')->with('error', 'Sync failed: '.$e->getMessage());
+        $synced = 0;
+        $errors = [];
+
+        foreach ($this->syncManager->all() as $source) {
+            if (! $source->isAvailable()) {
+                continue;
+            }
+
+            try {
+                $projects = $source->fetchProjects();
+
+                foreach ($projects as $normalized) {
+                    $this->projects->upsertFromSource($normalized);
+                }
+
+                $synced += count($projects);
+            } catch (\Throwable $e) {
+                $errors[] = $source->source().': '.$e->getMessage();
+            }
         }
 
-        foreach ($activecollabProjects as $acProject) {
-            $this->projects->upsertFromActiveCollab([
-                'activecollab_id' => $acProject['id'],
-                'name' => $acProject['name'],
-                'description' => $acProject['body'] ?? null,
-                'status' => $acProject['is_completed'] ? 'completed' : 'active',
-                'url' => $acProject['url'] ?? null,
-            ]);
+        if (! empty($errors)) {
+            return redirect()->route('projects.index')
+                ->with('error', 'Sync completed with errors: '.implode('; ', $errors));
         }
 
-        return redirect()->route('projects.index')->with('success', count($activecollabProjects).' projects synced from ActiveCollab.');
+        return redirect()->route('projects.index')
+            ->with('success', "{$synced} projects synced.");
     }
 }

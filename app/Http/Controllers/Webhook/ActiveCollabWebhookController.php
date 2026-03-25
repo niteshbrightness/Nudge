@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Webhook;
 
+use App\Contracts\Repositories\ProjectRepositoryInterface;
 use App\Contracts\Repositories\WebhookEventRepositoryInterface;
 use App\Http\Controllers\Controller;
 use App\Models\Integration;
-use App\Repositories\ProjectRepository;
 use App\Services\ActiveCollabService;
 use App\Services\BitlyService;
 use Illuminate\Http\Request;
@@ -18,7 +18,7 @@ class ActiveCollabWebhookController extends Controller
         private readonly ActiveCollabService $activeCollabService,
         private readonly BitlyService $bitlyService,
         private readonly WebhookEventRepositoryInterface $webhookEventRepository,
-        private readonly ProjectRepository $projectRepository,
+        private readonly ProjectRepositoryInterface $projectRepository,
     ) {}
 
     public function __invoke(Request $request, ?string $webhookToken = null): Response
@@ -56,7 +56,7 @@ class ActiveCollabWebhookController extends Controller
 
         $project = null;
         if ($parsed['project_id']) {
-            $project = $this->projectRepository->findByActivecollabId((int) $parsed['project_id']);
+            $project = $this->projectRepository->findByExternalId('activecollab', (string) $parsed['project_id']);
         }
 
         $resolvedTenantId = $tenantId ?? $project?->tenant_id;

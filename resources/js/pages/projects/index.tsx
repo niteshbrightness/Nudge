@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { ChevronDown, ChevronsUpDown, ChevronUp } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
@@ -38,11 +39,48 @@ interface Filters {
     search?: string;
     status?: string;
     client_id?: string;
+    sort_by?: string;
+    sort_dir?: 'asc' | 'desc';
 }
 
 interface SimpleClient {
     id: number;
     name: string;
+}
+
+function SortableHeader({
+    label,
+    column,
+    filters,
+    onSort,
+}: {
+    label: string;
+    column: string;
+    filters: Filters;
+    onSort: (col: string, dir: 'asc' | 'desc') => void;
+}) {
+    const isActive = filters.sort_by === column;
+    const nextDir = isActive && filters.sort_dir === 'asc' ? 'desc' : 'asc';
+
+    return (
+        <th
+            className="cursor-pointer px-6 py-3 font-medium text-muted-foreground select-none hover:text-foreground"
+            onClick={() => onSort(column, nextDir)}
+        >
+            <span className="inline-flex items-center gap-1">
+                {label}
+                {isActive ? (
+                    filters.sort_dir === 'asc' ? (
+                        <ChevronUp className="h-3.5 w-3.5" />
+                    ) : (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                    )
+                ) : (
+                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
+                )}
+            </span>
+        </th>
+    );
 }
 
 export default function ProjectsIndex({
@@ -78,7 +116,14 @@ export default function ProjectsIndex({
         [filters, applyFilters],
     );
 
-    const hasFilters = !!(filters.search || filters.status || filters.client_id);
+    const handleSort = useCallback(
+        (col: string, dir: 'asc' | 'desc') => {
+            applyFilters({ ...filters, sort_by: col, sort_dir: dir });
+        },
+        [filters, applyFilters],
+    );
+
+    const hasFilters = !!(filters.search || (filters.status && filters.status !== 'active') || filters.client_id);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -104,7 +149,7 @@ export default function ProjectsIndex({
                         className="max-w-xs"
                     />
                     <SearchableSelect
-                        value={filters.status ?? 'all'}
+                        value={filters.status ?? 'active'}
                         options={[
                             { value: 'active', label: 'Active' },
                             { value: 'completed', label: 'Completed' },
@@ -129,7 +174,7 @@ export default function ProjectsIndex({
                             size="sm"
                             onClick={() => {
                                 setSearch('');
-                                applyFilters({});
+                                applyFilters({ sort_by: filters.sort_by, sort_dir: filters.sort_dir });
                             }}
                         >
                             Clear filters
@@ -153,10 +198,20 @@ export default function ProjectsIndex({
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-sidebar-border/70 text-left dark:border-sidebar-border">
-                                    <th className="px-6 py-3 font-medium text-muted-foreground">Name</th>
+                                    <SortableHeader label="Name" column="name" filters={filters} onSort={handleSort} />
                                     <th className="px-6 py-3 font-medium text-muted-foreground">Client</th>
-                                    <th className="px-6 py-3 font-medium text-muted-foreground">Status</th>
-                                    <th className="px-6 py-3 font-medium text-muted-foreground">AC ID</th>
+                                    <SortableHeader
+                                        label="Status"
+                                        column="status"
+                                        filters={filters}
+                                        onSort={handleSort}
+                                    />
+                                    <SortableHeader
+                                        label="External ID"
+                                        column="external_id"
+                                        filters={filters}
+                                        onSort={handleSort}
+                                    />
                                     <th className="px-6 py-3"></th>
                                 </tr>
                             </thead>
@@ -177,7 +232,7 @@ export default function ProjectsIndex({
                                             </Badge>
                                         </td>
                                         <td className="px-6 py-3 text-muted-foreground">
-                                            {project.activecollab_id ?? '—'}
+                                            {project.external_id ?? '—'}
                                         </td>
                                         <td className="px-6 py-3 text-right">
                                             <Button variant="ghost" size="sm" asChild>

@@ -75,6 +75,11 @@ class ActiveCollabService
         return "{$this->baseUrl}/projects/{$projectId}";
     }
 
+    public function isConfigured(): bool
+    {
+        return ! empty($this->baseUrl) && ! empty($this->token);
+    }
+
     public function getWebhookSecret(): string
     {
         return $this->webhookSecret;

@@ -24,7 +24,7 @@ export interface Project {
     id: number;
     tenant_id: string;
     client_id: number | null;
-    activecollab_id: number | null;
+    external_id: number | null;
     name: string;
     description: string | null;
     status: 'active' | 'completed' | 'on_hold';
