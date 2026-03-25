@@ -53,7 +53,8 @@ class SendClientNotificationJob implements ShouldQueue
             ->whereIn('project_id', function ($query): void {
                 $query->select('id')
                     ->from('projects')
-                    ->where('client_id', $this->client->id);
+                    ->where('client_id', $this->client->id)
+                    ->where('status', 'active');
             })
             ->where('received_at', '>=', $since)
             ->latest('received_at')
@@ -74,7 +75,7 @@ class SendClientNotificationJob implements ShouldQueue
                     $description = $this->formatEventType($event->event_type);
                     $line = "• {$title}: {$description}";
 
-                    if (false && $event->short_url) { // TODO: remove false when we have a way to get the short url
+                    if ($event->short_url && config('notifications.include_short_urls', false)) {
                         $line .= "\n  {$event->short_url}";
                     }
 

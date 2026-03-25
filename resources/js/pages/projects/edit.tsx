@@ -4,8 +4,9 @@ import ProjectController from '@/actions/App/Http/Controllers/Projects/ProjectCo
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { edit, index, show } from '@/routes/projects';
@@ -18,6 +19,12 @@ const breadcrumbs = (project: Project): BreadcrumbItem[] => [
     { title: 'Edit', href: edit(project.id) },
 ];
 
+const statusOptions = [
+    { value: 'active', label: 'Active' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'on_hold', label: 'On Hold' },
+];
+
 export default function EditProject({
     project,
     clients,
@@ -27,6 +34,7 @@ export default function EditProject({
 }) {
     const form = useForm('put', ProjectController.update(project.id).url, {
         client_id: project.client_id ? String(project.client_id) : 'none',
+        status: project.status,
     });
 
     const submit = (e: React.FormEvent) => {
@@ -40,33 +48,45 @@ export default function EditProject({
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <Heading
                     title={`Edit ${project.name}`}
-                    description="Assign this project to a client for notification routing."
+                    description="Assign this project to a client and update its status."
                 />
 
                 <div className="max-w-xl rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border">
                     <form onSubmit={submit} className="space-y-5">
                         <div className="grid gap-2">
-                            <Label htmlFor="client_id">Client</Label>
-                            <Select
+                            <div className="flex items-center gap-1.5">
+                                <Label htmlFor="client_id">Client</Label>
+                                <InfoTooltip text="Webhook events from this project will be sent as SMS updates to the assigned client." />
+                            </div>
+                            <SearchableSelect
                                 value={form.data.client_id}
-                                onValueChange={(val) => {
+                                options={clients.map((c) => ({ value: String(c.id), label: c.name }))}
+                                onChange={(val) => {
                                     form.setData('client_id', val);
                                     form.validate('client_id');
                                 }}
-                            >
-                                <SelectTrigger id="client_id">
-                                    <SelectValue placeholder="Unassigned" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">Unassigned</SelectItem>
-                                    {clients.map((client) => (
-                                        <SelectItem key={client.id} value={String(client.id)}>
-                                            {client.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                allValue="none"
+                                allLabel="Unassigned"
+                            />
                             <InputError message={form.errors.client_id} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <div className="flex items-center gap-1.5">
+                                <Label htmlFor="status">Status</Label>
+                                <InfoTooltip text="Only Active projects send SMS notifications. On Hold and Completed projects are excluded." />
+                            </div>
+                            <SearchableSelect
+                                value={form.data.status}
+                                options={statusOptions}
+                                onChange={(val) => {
+                                    form.setData('status', val);
+                                    form.validate('status');
+                                }}
+                                allValue=""
+                                allLabel="Select status…"
+                            />
+                            <InputError message={form.errors.status} />
                         </div>
 
                         <div className="flex gap-3">

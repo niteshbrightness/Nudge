@@ -10,6 +10,7 @@ use App\Models\Client;
 use App\Models\Project;
 use App\Models\Timezone;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,10 +18,12 @@ class ClientController extends Controller
 {
     public function __construct(private readonly ClientRepositoryInterface $clients) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
         return Inertia::render('clients/index', [
-            'clients' => $this->clients->paginate(),
+            'clients' => $this->clients->paginate(15, $request->only(['search', 'project_id'])),
+            'filters' => $request->only(['search', 'project_id']),
+            'projects' => Project::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

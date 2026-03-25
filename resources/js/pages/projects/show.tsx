@@ -19,10 +19,7 @@ export default function ProjectShow({ project }: { project: Project }) {
             <Head title={project.name} />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <div className="flex items-start justify-between">
-                    <Heading
-                        title={project.name}
-                        description={project.description ?? 'No description provided.'}
-                    />
+                    <Heading title={project.name} description={project.description ?? 'No description provided.'} />
                     <div className="flex items-center gap-2">
                         {project.url && (
                             <Button variant="outline" size="sm" asChild>
@@ -42,23 +39,23 @@ export default function ProjectShow({ project }: { project: Project }) {
 
                 <div className="grid gap-4 md:grid-cols-3">
                     <div className="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Client</p>
+                        <p className="text-xs tracking-wide text-muted-foreground uppercase">Client</p>
                         <p className="mt-1 font-medium">
                             {project.client ? (
                                 <Link href={`/clients/${project.client.id}/edit`} className="hover:underline">
                                     {project.client.name}
                                 </Link>
                             ) : (
-                                <span className="italic text-muted-foreground">Unassigned</span>
+                                <span className="text-muted-foreground italic">Unassigned</span>
                             )}
                         </p>
                     </div>
                     <div className="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">ActiveCollab ID</p>
-                        <p className="mt-1 font-medium">{project.activecollab_id ?? '—'}</p>
+                        <p className="text-xs tracking-wide text-muted-foreground uppercase">External ID</p>
+                        <p className="mt-1 font-medium">{project.external_id ?? '—'}</p>
                     </div>
                     <div className="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Webhook Events</p>
+                        <p className="text-xs tracking-wide text-muted-foreground uppercase">Webhook Events</p>
                         <p className="mt-1 font-medium">{project.webhook_events?.length ?? 0}</p>
                     </div>
                 </div>
