@@ -3,6 +3,7 @@ import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
+import { humanReadableDate } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { edit, index, show } from '@/routes/projects';
 import type { BreadcrumbItem, Project } from '@/types';
@@ -94,8 +95,11 @@ export default function ProjectShow({ project }: { project: Project }) {
                                             </a>
                                         )}
                                     </div>
-                                    <span className="ml-4 shrink-0 text-xs text-muted-foreground">
-                                        {event.received_at}
+                                    <span
+                                        className="ml-4 shrink-0 text-xs text-muted-foreground"
+                                        title={event.received_at}
+                                    >
+                                        {humanReadableDate(event.received_at)}
                                     </span>
                                 </li>
                             ))}

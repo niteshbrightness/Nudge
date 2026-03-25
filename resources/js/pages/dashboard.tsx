@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import { humanReadableDate } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { index as clientsRoute } from '@/routes/clients';
 import { index as projectsRoute } from '@/routes/projects';
@@ -71,7 +72,9 @@ export default function Dashboard({ stats }: { stats: Stats }) {
                                             </span>
                                         )}
                                     </div>
-                                    <span className="text-xs text-muted-foreground">{event.received_at}</span>
+                                    <span className="text-xs text-muted-foreground" title={event.received_at}>
+                                        {humanReadableDate(event.received_at)}
+                                    </span>
                                 </li>
                             ))}
                         </ul>

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import IntegrationController from '@/actions/App/Http/Controllers/Integrations/IntegrationController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,18 +62,27 @@ export default function IntegrationSetup({ definition, integration, webhookUrl }
                                     {definition.credentialFields?.map((field) => (
                                         <div key={field.name} className="grid gap-2">
                                             <Label htmlFor={field.name}>{field.label}</Label>
-                                            <Input
-                                                id={field.name}
-                                                name={field.name}
-                                                type={field.type === 'password' ? 'password' : field.type}
-                                                placeholder={field.placeholder}
-                                                required={field.required}
-                                                defaultValue={
-                                                    isEdit
-                                                        ? (integration.credentials?.[field.name] ?? '')
-                                                        : undefined
-                                                }
-                                            />
+                                            {isEdit || field.type === 'password' ? (
+                                                <PasswordInput
+                                                    id={field.name}
+                                                    name={field.name}
+                                                    placeholder={field.placeholder}
+                                                    required={field.required}
+                                                    defaultValue={
+                                                        isEdit
+                                                            ? (integration.credentials?.[field.name] ?? '')
+                                                            : undefined
+                                                    }
+                                                />
+                                            ) : (
+                                                <Input
+                                                    id={field.name}
+                                                    name={field.name}
+                                                    type={field.type}
+                                                    placeholder={field.placeholder}
+                                                    required={field.required}
+                                                />
+                                            )}
                                             {field.hint && (
                                                 <p className="text-xs text-muted-foreground">{field.hint}</p>
                                             )}
@@ -85,7 +95,12 @@ export default function IntegrationSetup({ definition, integration, webhookUrl }
                                             <Label>Webhook URL</Label>
                                             <div className="flex gap-2">
                                                 <Input readOnly value={webhookUrl} className="font-mono text-xs" />
-                                                <Button type="button" variant="outline" size="icon" onClick={handleCopy}>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={handleCopy}
+                                                >
                                                     <Copy className="h-4 w-4" />
                                                 </Button>
                                             </div>

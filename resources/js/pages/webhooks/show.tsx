@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
+import { humanReadableDate } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { index, show } from '@/routes/webhooks';
 import type { BreadcrumbItem, WebhookEvent } from '@/types';
@@ -18,7 +19,10 @@ export default function WebhookEventShow({ event }: { event: WebhookEvent }) {
             <Head title={`Webhook Event #${event.id}`} />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <div className="flex items-center justify-between">
-                    <Heading title={`Event #${event.id}`} description={`Received ${event.received_at}`} />
+                    <Heading
+                        title={`Event #${event.id}`}
+                        description={`Received ${humanReadableDate(event.received_at)}`}
+                    />
                     <span className="rounded-full bg-sidebar-accent px-3 py-1 text-sm font-medium">
                         {event.event_type}
                     </span>

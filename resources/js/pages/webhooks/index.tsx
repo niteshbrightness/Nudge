@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import AppLayout from '@/layouts/app-layout';
+import { humanReadableDate } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { index, show } from '@/routes/webhooks';
 import type { BreadcrumbItem, Paginator, WebhookEvent } from '@/types';
@@ -148,7 +149,12 @@ export default function WebhooksIndex({
                                                 <span className="text-muted-foreground">—</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-3 text-xs text-muted-foreground">{event.received_at}</td>
+                                        <td
+                                            className="px-6 py-3 text-xs text-muted-foreground"
+                                            title={event.received_at}
+                                        >
+                                            {humanReadableDate(event.received_at)}
+                                        </td>
                                         <td className="px-6 py-3 text-right">
                                             <Button variant="ghost" size="sm" asChild>
                                                 <Link href={show(event.id)}>View</Link>

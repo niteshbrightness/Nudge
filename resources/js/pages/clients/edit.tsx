@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useForm } from 'laravel-precognition-react-inertia';
 import ClientController from '@/actions/App/Http/Controllers/Clients/ClientController';
 import Heading from '@/components/heading';
@@ -155,7 +155,7 @@ export default function EditClient({
                                 {form.processing ? 'Saving…' : 'Save Changes'}
                             </Button>
                             <Button variant="ghost" asChild>
-                                <a href={index()}>Cancel</a>
+                                <Link href={index()}>Cancel</Link>
                             </Button>
                         </div>
                     </form>

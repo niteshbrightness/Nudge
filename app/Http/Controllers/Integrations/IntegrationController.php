@@ -80,13 +80,6 @@ class IntegrationController extends Controller
         }
 
         $credentials = $integration->credentials ?? [];
-        $maskedCredentials = [];
-        foreach ($class::credentialFields() as $field) {
-            $name = $field['name'];
-            // Mask all stored credential values — never expose secrets in page props.
-            // The update() method treats '••••••••' as "unchanged" and keeps the stored value.
-            $maskedCredentials[$name] = ! empty($credentials[$name]) ? '••••••••' : '';
-        }
 
         return Inertia::render('integrations/setup', [
             'definition' => [
@@ -100,7 +93,7 @@ class IntegrationController extends Controller
             ],
             'integration' => [
                 'id' => $integration->id,
-                'credentials' => $maskedCredentials,
+                'credentials' => $credentials,
             ],
             'webhookUrl' => $webhookUrl,
         ]);
@@ -108,12 +101,9 @@ class IntegrationController extends Controller
 
     public function update(StoreIntegrationRequest $request, Integration $integration): RedirectResponse
     {
-        $existing = $integration->credentials ?? [];
         $incoming = $request->validated();
 
-        $merged = array_merge($existing, array_filter($incoming, fn ($v) => $v !== '••••••••'));
-
-        $this->integrations->upsert($integration->service, $merged);
+        $this->integrations->upsert($integration->service, $incoming);
 
         return redirect()->route('integrations.index')->with('success', 'Integration updated successfully.');
     }
