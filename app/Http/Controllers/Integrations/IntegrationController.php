@@ -87,7 +87,12 @@ class IntegrationController extends Controller
                 'label' => $class::label(),
                 'description' => $class::description(),
                 'logoIcon' => $class::logoIcon(),
-                'credentialFields' => $class::credentialFields(),
+                'credentialFields' => array_map(
+                    fn ($field) => array_merge($field, [
+                        'required' => $field['type'] === 'password' ? false : $field['required'],
+                    ]),
+                    $class::credentialFields()
+                ),
                 'setupSteps' => $class::setupSteps(),
                 'hasWebhook' => $class::hasWebhook(),
             ],
@@ -101,9 +106,10 @@ class IntegrationController extends Controller
 
     public function update(StoreIntegrationRequest $request, Integration $integration): RedirectResponse
     {
-        $incoming = $request->validated();
+        $existing = $integration->credentials ?? [];
+        $incoming = array_filter($request->validated(), fn ($v) => $v !== null && $v !== '');
 
-        $this->integrations->upsert($integration->service, $incoming);
+        $this->integrations->upsert($integration->service, array_merge($existing, $incoming));
 
         return redirect()->route('integrations.index')->with('success', 'Integration updated successfully.');
     }
