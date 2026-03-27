@@ -29,11 +29,13 @@ class StoreIntegrationRequest extends FormRequest
         $manager = app(IntegrationManager::class);
         $fields = $manager->get($service)::credentialFields();
 
+        $isUpdate = $this->route('integration') !== null;
+
         $rules = [];
         foreach ($fields as $field) {
             $fieldRules = [];
 
-            if ($field['required']) {
+            if ($field['required'] && ! ($isUpdate && $field['type'] === 'password')) {
                 $fieldRules[] = 'required';
             } else {
                 $fieldRules[] = 'nullable';
