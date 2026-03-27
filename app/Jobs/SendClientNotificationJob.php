@@ -75,7 +75,6 @@ class SendClientNotificationJob implements ShouldQueue
         })->values()->all();
 
         $header = "Project: {$this->project->name}";
-        $suffix = "\nMore Update View On ActiveCollab";
         $maxLength = 1600;
         $includedCount = count($lines);
 
@@ -85,7 +84,8 @@ class SendClientNotificationJob implements ShouldQueue
             $truncated = $includedCount < count($lines);
 
             if ($truncated) {
-                $message .= $suffix;
+                $truncatedCount = count($lines) - $includedCount;
+                $message .= "\nand {$truncatedCount} more update".($truncatedCount === 1 ? '' : 's');
             }
 
             if (strlen($message) <= $maxLength) {

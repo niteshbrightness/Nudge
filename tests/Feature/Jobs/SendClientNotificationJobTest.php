@@ -363,7 +363,44 @@ test('suffix appended when events are dropped due to character limit', function 
 
     (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
 
-    expect($capturedMessage)->toContain('More Update View On ActiveCollab');
+    expect($capturedMessage)->toMatch('/and \d+ more updates/');
+});
+
+test('suffix shows exact count of dropped events', function () {
+    $client = Client::factory()->create();
+    $project = Project::factory()->create(['name' => 'My Project', 'status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    // Each event is ~320 chars; 5 events = ~1600 chars header included, so some will be dropped
+    $longTitle = str_repeat('C', 300);
+
+    WebhookEvent::factory()->count(10)->sequence(
+        fn ($s) => ['received_at' => now()->subMinutes($s->index + 1)]
+    )->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => $longTitle],
+        'event_type' => 'task_updated',
+    ]);
+
+    $capturedMessage = '';
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) use (&$capturedMessage) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(function ($c, string $message) use (&$capturedMessage) {
+                $capturedMessage = $message;
+
+                return true;
+            });
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+
+    preg_match('/and (\d+) more updates/', $capturedMessage, $matches);
+    $droppedCount = (int) $matches[1];
+    $includedCount = substr_count($capturedMessage, '•');
+
+    expect($includedCount + $droppedCount)->toBe(10);
 });
 
 test('no suffix when all events fit within 1600 chars', function () {
@@ -392,7 +429,7 @@ test('no suffix when all events fit within 1600 chars', function () {
 
     (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
 
-    expect($capturedMessage)->not->toContain('More Update View On ActiveCollab');
+    expect($capturedMessage)->not->toContain('more updates');
 });
 
 test('message includes project name header', function () {
