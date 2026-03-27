@@ -23,6 +23,18 @@ class ActiveCollabWebhookController extends Controller
 
     public function __invoke(Request $request, ?string $webhookToken = null): Response
     {
+        Log::channel('webhook')->info('Incoming webhook request', [
+            'timestamp' => now()->toIso8601String(),
+            'ip' => $request->ip(),
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'headers' => $request->headers->all(),
+            'query' => $request->query(),
+            'body_raw' => $request->getContent(),
+            'body_json' => $request->json()->all(),
+            'webhook_token' => $webhookToken,
+        ]);
+
         $tenantId = null;
 
         if ($webhookToken) {
