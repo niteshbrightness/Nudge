@@ -7,7 +7,7 @@ use App\Contracts\Repositories\WebhookEventRepositoryInterface;
 use App\Http\Controllers\Controller;
 use App\Models\Integration;
 use App\Services\ActiveCollabService;
-use App\Services\BitlyService;
+use App\Services\TinyUrlService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -16,7 +16,7 @@ class ActiveCollabWebhookController extends Controller
 {
     public function __construct(
         private readonly ActiveCollabService $activeCollabService,
-        private readonly BitlyService $bitlyService,
+        private readonly TinyUrlService $tinyUrlService,
         private readonly WebhookEventRepositoryInterface $webhookEventRepository,
         private readonly ProjectRepositoryInterface $projectRepository,
     ) {}
@@ -53,8 +53,7 @@ class ActiveCollabWebhookController extends Controller
 
         $secret = $this->activeCollabService->getWebhookSecret();
         $signature = $request->header('X-Angie-WebhookSecret', '');
-
-        if (! $this->activeCollabService->verifySignature($request->getContent(), $signature, $secret)) {
+        if (! empty($secret) && ! $this->activeCollabService->verifySignature($request->getContent(), $signature, $secret)) {
             Log::warning('ActiveCollab webhook signature mismatch', ['ip' => $request->ip()]);
 
             return response('Unauthorized', Response::HTTP_UNAUTHORIZED);
@@ -64,7 +63,7 @@ class ActiveCollabWebhookController extends Controller
 
         $parsed = $this->activeCollabService->parseWebhookPayload($payload);
         $deepLink = $this->activeCollabService->buildDeepLink($payload);
-        $shortUrl = $deepLink ? $this->bitlyService->shorten($deepLink) : null;
+        $shortUrl = $deepLink ? $this->tinyUrlService->shorten($deepLink) : null;
 
         $project = null;
         if ($parsed['project_id']) {

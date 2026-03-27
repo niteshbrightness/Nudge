@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Client;
 use App\Models\NotificationLog;
+use App\Models\Project;
 use App\Models\WebhookEvent;
 use App\Services\NotificationService;
 use Carbon\CarbonImmutable;
@@ -42,31 +43,29 @@ class SendClientNotificationJob implements ShouldQueue
         return NotificationLog::query()
             ->where('client_id', $this->client->id)
             ->where('status', 'sent')
-            ->where('sent_at', '>=', now()->subMinutes(60))
+            ->where('sent_at', '>=', now()->subMinutes(15))
             ->exists();
     }
 
     private function buildMessage(CarbonImmutable $since): string
     {
-        $recentEvents = WebhookEvent::query()
-            ->with('project')
-            ->whereIn('project_id', function ($query): void {
-                $query->select('id')
-                    ->from('projects')
-                    ->where('client_id', $this->client->id)
-                    ->where('status', 'active');
-            })
-            ->where('received_at', '>=', $since)
-            ->latest('received_at')
-            ->limit(10)
-            ->get();
+        $projectIds = Project::query()
+            ->where('client_id', $this->client->id)
+            ->where('status', 'active')
+            ->pluck('id');
 
-        if ($recentEvents->isEmpty()) {
+        if ($projectIds->isEmpty()) {
             return '';
         }
 
-        $sections = $recentEvents
+        $sections = WebhookEvent::query()
+            ->with('project')
+            ->whereIn('project_id', $projectIds)
+            ->where('received_at', '>=', $since)
+            ->latest('received_at')
+            ->get()
             ->groupBy('project_id')
+            ->map(fn (Collection $events) => $events->take(5))
             ->map(function (Collection $events): string {
                 $projectName = $events->first()->project?->name ?? 'Unknown Project';
 
@@ -75,7 +74,7 @@ class SendClientNotificationJob implements ShouldQueue
                     $description = $this->formatEventType($event->event_type);
                     $line = "• {$title}: {$description}";
 
-                    if ($event->short_url && config('notifications.include_short_urls', false)) {
+                    if ($event->short_url) {
                         $line .= "\n  {$event->short_url}";
                     }
 
@@ -84,6 +83,10 @@ class SendClientNotificationJob implements ShouldQueue
 
                 return "Project: {$projectName}\n".$lines->implode("\n");
             });
+
+        if ($sections->isEmpty()) {
+            return '';
+        }
 
         return $sections->implode("\n\n");
     }

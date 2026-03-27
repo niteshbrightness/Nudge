@@ -40,11 +40,11 @@ class ActiveCollabService
     public function parseWebhookPayload(array $payload): array
     {
         return [
-            'event_type' => $payload['event_type'] ?? $payload['type'] ?? 'unknown',
-            'project_id' => $payload['payload']['project_id'] ?? $payload['project_id'] ?? null,
-            'object_id' => $payload['payload']['id'] ?? null,
-            'object_type' => $payload['payload']['class'] ?? null,
-            'title' => $payload['payload']['name'] ?? $payload['payload']['body'] ?? null,
+            'event_type' => $payload['event'] ?? $payload['event_type'] ?? $payload['type'] ?? 'unknown',
+            'project_id' => $payload['project']['id'] ?? $payload['payload']['project_id'] ?? $payload['project_id'] ?? null,
+            'object_id' => $payload['task']['id'] ?? $payload['payload']['id'] ?? null,
+            'object_type' => isset($payload['task']) ? 'task' : ($payload['payload']['class'] ?? null),
+            'title' => $payload['task']['name'] ?? $payload['payload']['name'] ?? $payload['payload']['body'] ?? null,
             'assignee_id' => $payload['payload']['assignee_id'] ?? null,
         ];
     }
@@ -60,9 +60,9 @@ class ActiveCollabService
             return null;
         }
 
-        $projectId = $payload['payload']['project_id'] ?? $payload['project_id'] ?? null;
-        $objectId = $payload['payload']['id'] ?? null;
-        $objectType = strtolower($payload['payload']['class'] ?? '');
+        $projectId = $payload['project']['id'] ?? $payload['payload']['project_id'] ?? $payload['project_id'] ?? null;
+        $objectId = $payload['task']['id'] ?? $payload['payload']['id'] ?? null;
+        $objectType = isset($payload['task']) ? 'task' : strtolower($payload['payload']['class'] ?? '');
 
         if (! $projectId) {
             return null;

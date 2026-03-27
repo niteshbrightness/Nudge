@@ -132,7 +132,7 @@ test('deduplication guard prevents sending when already sent within 60 minutes',
         'channel' => 'twilio',
         'message' => 'Recent summary',
         'status' => 'sent',
-        'sent_at' => now()->subMinutes(30),
+        'sent_at' => now()->subMinutes(10),
     ]);
 
     WebhookEvent::factory()->create([
@@ -231,11 +231,11 @@ test('ignores failed logs when determining last sent time', function () {
     (new SendClientNotificationJob($client))->handle(app(NotificationService::class));
 });
 
-test('includes up to 10 most recent events', function () {
+test('includes up to 5 most recent events per project', function () {
     $client = Client::factory()->create();
     $project = Project::factory()->create(['client_id' => $client->id, 'status' => 'active']);
 
-    WebhookEvent::factory()->count(12)->create([
+    WebhookEvent::factory()->count(7)->create([
         'project_id' => $project->id,
         'received_at' => now()->subHour(),
     ]);
@@ -254,7 +254,7 @@ test('includes up to 10 most recent events', function () {
 
     (new SendClientNotificationJob($client))->handle(app(NotificationService::class));
 
-    expect(substr_count($capturedMessage, '•'))->toBe(10);
+    expect(substr_count($capturedMessage, '•'))->toBe(5);
 });
 
 test('message is grouped by project with project name headers', function () {
@@ -266,7 +266,7 @@ test('message is grouped by project with project name headers', function () {
         'project_id' => $projectA->id,
         'parsed_data' => ['title' => 'Homepage layout'],
         'event_type' => 'CommentCreated',
-        'short_url' => 'bit.ly/abc123',
+        'short_url' => 'tinyurl.com/abc123',
         'received_at' => now()->subHour(),
     ]);
 
@@ -274,7 +274,7 @@ test('message is grouped by project with project name headers', function () {
         'project_id' => $projectB->id,
         'parsed_data' => ['title' => 'Login page'],
         'event_type' => 'TaskCreated',
-        'short_url' => 'bit.ly/def456',
+        'short_url' => 'tinyurl.com/def456',
         'received_at' => now()->subHour(),
     ]);
 
@@ -299,9 +299,7 @@ test('message is grouped by project with project name headers', function () {
         ->toContain('• Login page: New task');
 });
 
-test('url appears on indented line below event bullet when include_short_urls is enabled', function () {
-    config(['notifications.include_short_urls' => true]);
-
+test('url appears on indented line below event bullet when short_url is set', function () {
     $client = Client::factory()->create();
     $project = Project::factory()->create(['client_id' => $client->id, 'name' => 'My Project', 'status' => 'active']);
 
@@ -309,7 +307,7 @@ test('url appears on indented line below event bullet when include_short_urls is
         'project_id' => $project->id,
         'parsed_data' => ['title' => 'Some task'],
         'event_type' => 'task_updated',
-        'short_url' => 'bit.ly/xyz789',
+        'short_url' => 'tinyurl.com/xyz789',
         'received_at' => now()->subHour(),
     ]);
 
@@ -327,7 +325,7 @@ test('url appears on indented line below event bullet when include_short_urls is
 
     (new SendClientNotificationJob($client))->handle(app(NotificationService::class));
 
-    expect($capturedMessage)->toContain("• Some task: Updated\n  bit.ly/xyz789");
+    expect($capturedMessage)->toContain("• Some task: Updated\n  tinyurl.com/xyz789");
 });
 
 test('skips events from on_hold projects', function () {
