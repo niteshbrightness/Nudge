@@ -10,7 +10,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { edit, index, show } from '@/routes/projects';
-import type { BreadcrumbItem, Client, Project } from '@/types';
+import type { BreadcrumbItem, Project } from '@/types';
 
 const breadcrumbs = (project: Project): BreadcrumbItem[] => [
     { title: 'Dashboard', href: dashboard() },
@@ -25,15 +25,8 @@ const statusOptions = [
     { value: 'on_hold', label: 'On Hold' },
 ];
 
-export default function EditProject({
-    project,
-    clients,
-}: {
-    project: Project;
-    clients: Pick<Client, 'id' | 'name'>[];
-}) {
+export default function EditProject({ project }: { project: Project }) {
     const form = useForm('put', ProjectController.update(project.id).url, {
-        client_id: project.client_id ? String(project.client_id) : 'none',
         status: project.status,
     });
 
@@ -48,29 +41,11 @@ export default function EditProject({
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <Heading
                     title={`Edit ${project.name}`}
-                    description="Assign this project to a client and update its status."
+                    description="Update this project's status. Client assignments are managed from the Clients page."
                 />
 
                 <div className="max-w-xl rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border">
                     <form onSubmit={submit} className="space-y-5">
-                        <div className="grid gap-2">
-                            <div className="flex items-center gap-1.5">
-                                <Label htmlFor="client_id">Client</Label>
-                                <InfoTooltip text="Webhook events from this project will be sent as SMS updates to the assigned client." />
-                            </div>
-                            <SearchableSelect
-                                value={form.data.client_id}
-                                options={clients.map((c) => ({ value: String(c.id), label: c.name }))}
-                                onChange={(val) => {
-                                    form.setData('client_id', val);
-                                    form.validate('client_id');
-                                }}
-                                allValue="none"
-                                allLabel="Unassigned"
-                            />
-                            <InputError message={form.errors.client_id} />
-                        </div>
-
                         <div className="grid gap-2">
                             <div className="flex items-center gap-1.5">
                                 <Label htmlFor="status">Status</Label>

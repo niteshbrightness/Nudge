@@ -45,14 +45,12 @@ class ProjectController extends Controller
     {
         return Inertia::render('projects/edit', [
             'project' => $this->projects->find($project->id),
-            'clients' => Client::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
     {
         $this->projects->update($project, [
-            'client_id' => $request->client_id,
             'status' => $request->status,
         ]);
 

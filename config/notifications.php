@@ -40,15 +40,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Include Short URLs in Notifications
-    |--------------------------------------------------------------------------
-    | When enabled, Bitly short URLs are appended to each event line in the
-    | SMS notification. Requires the Bitly integration to be connected.
-    */
-    'include_short_urls' => (bool) env('NOTIFICATION_INCLUDE_SHORT_URLS', false),
-
-    /*
-    |--------------------------------------------------------------------------
     | Twilio
     |--------------------------------------------------------------------------
     */

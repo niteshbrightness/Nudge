@@ -224,7 +224,11 @@ export default function ProjectsIndex({
                                             </Link>
                                         </td>
                                         <td className="px-6 py-3 text-muted-foreground">
-                                            {project.client?.name ?? <span className="italic">Unassigned</span>}
+                                            {project.clients && project.clients.length > 0 ? (
+                                                project.clients.map((c) => c.name).join(', ')
+                                            ) : (
+                                                <span className="italic">Unassigned</span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-3">
                                             <Badge variant={statusVariant(project.status)}>

@@ -21,28 +21,35 @@ export function humanReadableDate(date: string | Date): string {
     const diffDays = Math.floor(diffHours / 24);
 
     if (diffSecs < 60) {
-        return 'just now';
+        return 'Just Now';
     }
 
     if (diffMins < 60) {
-        return `${diffMins}m ago`;
+        return `${diffMins} ${diffMins === 1 ? 'Minute' : 'Minutes'} Ago`;
     }
 
     if (diffHours < 24) {
-        return `${diffHours}h ago`;
+        return `${diffHours} ${diffHours === 1 ? 'Hour' : 'Hours'} Ago`;
     }
 
     if (diffDays === 1) {
-        return 'yesterday';
+        return 'Yesterday';
     }
 
     if (diffDays < 30) {
-        return `${diffDays}d ago`;
+        return `${diffDays} ${diffDays === 1 ? 'Day' : 'Days'} Ago`;
+    }
+
+    if (diffDays < 365) {
+        return d.toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+        });
     }
 
     return d.toLocaleDateString(undefined, {
         month: 'short',
         day: 'numeric',
-        year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+        year: 'numeric',
     });
 }

@@ -17,7 +17,7 @@ class NotificationService
         $this->channel = $this->resolveChannel();
     }
 
-    public function send(Client $client, string $message, ?\DateTimeInterface $queriedSince = null): void
+    public function send(Client $client, string $message, ?\DateTimeInterface $queriedSince = null, ?int $projectId = null): void
     {
         $channelName = config('notifications.channel', 'twilio');
 
@@ -27,6 +27,7 @@ class NotificationService
             NotificationLog::create([
                 'tenant_id' => $client->tenant_id,
                 'client_id' => $client->id,
+                'project_id' => $projectId,
                 'channel' => $channelName,
                 'message' => $message,
                 'status' => 'sent',
@@ -36,6 +37,7 @@ class NotificationService
         } catch (Throwable $e) {
             Log::error('Notification send failed', [
                 'client_id' => $client->id,
+                'project_id' => $projectId,
                 'channel' => $channelName,
                 'error' => $e->getMessage(),
             ]);
@@ -43,6 +45,7 @@ class NotificationService
             NotificationLog::create([
                 'tenant_id' => $client->tenant_id,
                 'client_id' => $client->id,
+                'project_id' => $projectId,
                 'channel' => $channelName,
                 'message' => $message,
                 'status' => 'failed',

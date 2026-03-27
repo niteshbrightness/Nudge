@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Projects;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateProjectRequest extends FormRequest
@@ -15,20 +14,12 @@ class UpdateProjectRequest extends FormRequest
         return true;
     }
 
-    protected function prepareForValidation(): void
-    {
-        if ($this->client_id === 'none') {
-            $this->merge(['client_id' => null]);
-        }
-    }
-
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'client_id' => ['nullable', 'integer', 'exists:clients,id'],
             'status' => ['required', 'string', 'in:active,completed,on_hold'],
         ];
     }
@@ -39,7 +30,6 @@ class UpdateProjectRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'client_id.exists' => 'The selected client is invalid.',
             'status.in' => 'The selected status is invalid.',
         ];
     }
