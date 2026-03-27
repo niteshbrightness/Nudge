@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
-#[Fillable(['tenant_id', 'client_id', 'channel', 'message', 'status', 'error_message', 'sent_at', 'queried_since'])]
+#[Fillable(['tenant_id', 'client_id', 'project_id', 'channel', 'message', 'status', 'error_message', 'sent_at', 'queried_since'])]
 class NotificationLog extends Model
 {
     use BelongsToTenant;
@@ -28,5 +28,10 @@ class NotificationLog extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
     }
 }

@@ -23,13 +23,12 @@ export interface Client {
 export interface Project {
     id: number;
     tenant_id: string;
-    client_id: number | null;
     external_id: number | null;
     name: string;
     description: string | null;
     status: 'active' | 'completed' | 'on_hold';
     url: string | null;
-    client?: Client;
+    clients?: Client[];
     webhook_events?: WebhookEvent[];
     created_at: string;
     updated_at: string;

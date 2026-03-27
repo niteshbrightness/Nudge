@@ -10,7 +10,6 @@ use App\Services\NotificationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Collection;
 
 class SendClientNotificationJob implements ShouldQueue
 {
@@ -20,7 +19,10 @@ class SendClientNotificationJob implements ShouldQueue
 
     public int $backoff = 60;
 
-    public function __construct(public readonly Client $client) {}
+    public function __construct(
+        public readonly Client $client,
+        public readonly Project $project,
+    ) {}
 
     public function handle(NotificationService $notificationService): void
     {
@@ -35,13 +37,14 @@ class SendClientNotificationJob implements ShouldQueue
             return;
         }
 
-        $notificationService->send($this->client, $message, $since);
+        $notificationService->send($this->client, $message, $since, $this->project->id);
     }
 
     private function alreadySentRecently(): bool
     {
         return NotificationLog::query()
             ->where('client_id', $this->client->id)
+            ->where('project_id', $this->project->id)
             ->where('status', 'sent')
             ->where('sent_at', '>=', now()->subMinutes(15))
             ->exists();
@@ -49,46 +52,31 @@ class SendClientNotificationJob implements ShouldQueue
 
     private function buildMessage(CarbonImmutable $since): string
     {
-        $projectIds = Project::query()
-            ->where('client_id', $this->client->id)
-            ->where('status', 'active')
-            ->pluck('id');
-
-        if ($projectIds->isEmpty()) {
-            return '';
-        }
-
-        $sections = WebhookEvent::query()
+        $events = WebhookEvent::query()
             ->with('project')
-            ->whereIn('project_id', $projectIds)
+            ->where('project_id', $this->project->id)
             ->where('received_at', '>=', $since)
             ->latest('received_at')
-            ->get()
-            ->groupBy('project_id')
-            ->map(fn (Collection $events) => $events->take(5))
-            ->map(function (Collection $events): string {
-                $projectName = $events->first()->project?->name ?? 'Unknown Project';
+            ->take(5)
+            ->get();
 
-                $lines = $events->map(function (WebhookEvent $event): string {
-                    $title = data_get($event->parsed_data, 'title', 'Project update');
-                    $description = $this->formatEventType($event->event_type);
-                    $line = "• {$title}: {$description}";
-
-                    if ($event->short_url) {
-                        $line .= "\n  {$event->short_url}";
-                    }
-
-                    return $line;
-                });
-
-                return "Project: {$projectName}\n".$lines->implode("\n");
-            });
-
-        if ($sections->isEmpty()) {
+        if ($events->isEmpty()) {
             return '';
         }
 
-        return $sections->implode("\n\n");
+        $lines = $events->map(function (WebhookEvent $event): string {
+            $title = data_get($event->parsed_data, 'title', 'Project update');
+            $description = $this->formatEventType($event->event_type);
+            $line = "• {$title}: {$description}";
+
+            if ($event->short_url) {
+                $line .= "\n  {$event->short_url}";
+            }
+
+            return $line;
+        });
+
+        return "Project: {$this->project->name}\n".$lines->implode("\n");
     }
 
     private function formatEventType(string $eventType): string
@@ -109,6 +97,7 @@ class SendClientNotificationJob implements ShouldQueue
     {
         $lastLog = NotificationLog::query()
             ->where('client_id', $this->client->id)
+            ->where('project_id', $this->project->id)
             ->where('status', 'sent')
             ->latest('sent_at')
             ->first();

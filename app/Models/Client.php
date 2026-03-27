@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
@@ -27,9 +28,9 @@ class Client extends Model
         return $this->belongsTo(Timezone::class);
     }
 
-    public function projects(): HasMany
+    public function projects(): BelongsToMany
     {
-        return $this->hasMany(Project::class);
+        return $this->belongsToMany(Project::class);
     }
 
     public function notificationLogs(): HasMany
