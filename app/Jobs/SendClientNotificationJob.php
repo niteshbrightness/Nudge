@@ -53,11 +53,9 @@ class SendClientNotificationJob implements ShouldQueue
     private function buildMessage(CarbonImmutable $since): string
     {
         $events = WebhookEvent::query()
-            ->with('project')
             ->where('project_id', $this->project->id)
             ->where('received_at', '>=', $since)
             ->latest('received_at')
-            ->take(5)
             ->get();
 
         if ($events->isEmpty()) {
@@ -74,9 +72,30 @@ class SendClientNotificationJob implements ShouldQueue
             }
 
             return $line;
-        });
+        })->values()->all();
 
-        return "Project: {$this->project->name}\n".$lines->implode("\n");
+        $header = "Project: {$this->project->name}";
+        $suffix = "\nMore Update View On ActiveCollab";
+        $maxLength = 1600;
+        $includedCount = count($lines);
+
+        while ($includedCount > 0) {
+            $body = implode("\n", array_slice($lines, 0, $includedCount));
+            $message = $header."\n".$body;
+            $truncated = $includedCount < count($lines);
+
+            if ($truncated) {
+                $message .= $suffix;
+            }
+
+            if (strlen($message) <= $maxLength) {
+                return $message;
+            }
+
+            $includedCount--;
+        }
+
+        return '';
     }
 
     private function formatEventType(string $eventType): string

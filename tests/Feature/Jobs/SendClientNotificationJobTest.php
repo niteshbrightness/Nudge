@@ -276,13 +276,14 @@ test('ignores failed logs when determining last sent time', function () {
     (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
 });
 
-test('includes up to 5 most recent events per project', function () {
+test('all events are included when they fit within 1600 chars', function () {
     $client = Client::factory()->create();
     $project = Project::factory()->create(['status' => 'active']);
     $client->projects()->attach($project->id);
 
     WebhookEvent::factory()->count(7)->create([
         'project_id' => $project->id,
+        'parsed_data' => ['title' => 'Short title'],
         'received_at' => now()->subHour(),
     ]);
 
@@ -300,7 +301,98 @@ test('includes up to 5 most recent events per project', function () {
 
     (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
 
-    expect(substr_count($capturedMessage, '•'))->toBe(5);
+    expect(substr_count($capturedMessage, '•'))->toBe(7);
+});
+
+test('message does not exceed 1600 characters when events are long', function () {
+    $client = Client::factory()->create();
+    $project = Project::factory()->create(['name' => 'My Project', 'status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    $longTitle = str_repeat('A', 300);
+
+    WebhookEvent::factory()->count(10)->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => $longTitle],
+        'event_type' => 'task_updated',
+        'received_at' => now()->subHour(),
+    ]);
+
+    $capturedMessage = '';
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) use (&$capturedMessage) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(function ($c, string $message) use (&$capturedMessage) {
+                $capturedMessage = $message;
+
+                return true;
+            });
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+
+    expect(strlen($capturedMessage))->toBeLessThanOrEqual(1600);
+});
+
+test('suffix appended when events are dropped due to character limit', function () {
+    $client = Client::factory()->create();
+    $project = Project::factory()->create(['name' => 'My Project', 'status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    $longTitle = str_repeat('B', 300);
+
+    WebhookEvent::factory()->count(10)->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => $longTitle],
+        'event_type' => 'task_updated',
+        'received_at' => now()->subHour(),
+    ]);
+
+    $capturedMessage = '';
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) use (&$capturedMessage) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(function ($c, string $message) use (&$capturedMessage) {
+                $capturedMessage = $message;
+
+                return true;
+            });
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+
+    expect($capturedMessage)->toContain('More Update View On ActiveCollab');
+});
+
+test('no suffix when all events fit within 1600 chars', function () {
+    $client = Client::factory()->create();
+    $project = Project::factory()->create(['name' => 'My Project', 'status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    WebhookEvent::factory()->count(3)->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'Short task'],
+        'event_type' => 'task_updated',
+        'received_at' => now()->subHour(),
+    ]);
+
+    $capturedMessage = '';
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) use (&$capturedMessage) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(function ($c, string $message) use (&$capturedMessage) {
+                $capturedMessage = $message;
+
+                return true;
+            });
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+
+    expect($capturedMessage)->not->toContain('More Update View On ActiveCollab');
 });
 
 test('message includes project name header', function () {
