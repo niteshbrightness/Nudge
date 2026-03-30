@@ -314,7 +314,7 @@ test('message does not exceed 1600 characters when events are long', function ()
     WebhookEvent::factory()->count(10)->create([
         'project_id' => $project->id,
         'parsed_data' => ['title' => $longTitle],
-        'event_type' => 'task_updated',
+        'event_type' => 'TaskUpdated',
         'received_at' => now()->subHour(),
     ]);
 
@@ -345,7 +345,7 @@ test('suffix appended when events are dropped due to character limit', function 
     WebhookEvent::factory()->count(10)->create([
         'project_id' => $project->id,
         'parsed_data' => ['title' => $longTitle],
-        'event_type' => 'task_updated',
+        'event_type' => 'TaskUpdated',
         'received_at' => now()->subHour(),
     ]);
 
@@ -379,7 +379,7 @@ test('suffix shows exact count of dropped events', function () {
     )->create([
         'project_id' => $project->id,
         'parsed_data' => ['title' => $longTitle],
-        'event_type' => 'task_updated',
+        'event_type' => 'TaskUpdated',
     ]);
 
     $capturedMessage = '';
@@ -411,7 +411,7 @@ test('no suffix when all events fit within 1600 chars', function () {
     WebhookEvent::factory()->count(3)->create([
         'project_id' => $project->id,
         'parsed_data' => ['title' => 'Short task'],
-        'event_type' => 'task_updated',
+        'event_type' => 'TaskUpdated',
         'received_at' => now()->subHour(),
     ]);
 
@@ -439,7 +439,7 @@ test('message includes project name header', function () {
 
     WebhookEvent::factory()->create([
         'project_id' => $project->id,
-        'parsed_data' => ['title' => 'Homepage layout'],
+        'parsed_data' => ['title' => 'Some long comment text', 'task_name' => 'Homepage layout'],
         'event_type' => 'CommentCreated',
         'short_url' => 'tinyurl.com/abc123',
         'received_at' => now()->subHour(),
@@ -472,7 +472,7 @@ test('url appears on indented line below event bullet when short_url is set', fu
     WebhookEvent::factory()->create([
         'project_id' => $project->id,
         'parsed_data' => ['title' => 'Some task'],
-        'event_type' => 'task_updated',
+        'event_type' => 'TaskUpdated',
         'short_url' => 'tinyurl.com/xyz789',
         'received_at' => now()->subHour(),
     ]);
@@ -491,7 +491,105 @@ test('url appears on indented line below event bullet when short_url is set', fu
 
     (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
 
-    expect($capturedMessage)->toContain("• Some task: Updated\n  tinyurl.com/xyz789");
+    expect($capturedMessage)->toContain("• Some task: Status changed\n  tinyurl.com/xyz789");
+});
+
+test('task_name is preferred over title when both are present', function () {
+    $client = Client::factory()->create();
+    $project = Project::factory()->create(['status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'Long comment body text here', 'task_name' => 'My Task'],
+        'event_type' => 'CommentCreated',
+        'received_at' => now()->subHour(),
+    ]);
+
+    $capturedMessage = '';
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) use (&$capturedMessage) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(function ($c, string $message) use (&$capturedMessage) {
+                $capturedMessage = $message;
+
+                return true;
+            });
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+
+    expect($capturedMessage)
+        ->toContain('My Task')
+        ->not->toContain('Long comment body text here');
+});
+
+test('falls back to title when task_name is absent', function () {
+    $client = Client::factory()->create();
+    $project = Project::factory()->create(['status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'Fallback title'],
+        'event_type' => 'TaskCreated',
+        'received_at' => now()->subHour(),
+    ]);
+
+    $capturedMessage = '';
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) use (&$capturedMessage) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(function ($c, string $message) use (&$capturedMessage) {
+                $capturedMessage = $message;
+
+                return true;
+            });
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+
+    expect($capturedMessage)->toContain('Fallback title');
+});
+
+test('actor name appears in message when created_by_name is set', function () {
+    $client = Client::factory()->create();
+    $project = Project::factory()->create(['name' => 'Alpha Redesign', 'status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'Homepage layout', 'created_by_name' => 'John'],
+        'event_type' => 'CommentCreated',
+        'received_at' => now()->subHour(),
+    ]);
+
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'API integration', 'created_by_name' => 'Sarah'],
+        'event_type' => 'TaskUpdated',
+        'received_at' => now()->subMinutes(30),
+    ]);
+
+    $capturedMessage = '';
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) use (&$capturedMessage) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(function ($c, string $message) use (&$capturedMessage) {
+                $capturedMessage = $message;
+
+                return true;
+            });
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+
+    expect($capturedMessage)
+        ->toContain('• Homepage layout: New comment by John')
+        ->toContain('• API integration: Status changed by Sarah');
 });
 
 // Scenario 1: Client with 2 projects gets 2 separate SMS

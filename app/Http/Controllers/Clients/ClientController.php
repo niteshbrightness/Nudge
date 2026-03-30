@@ -50,7 +50,7 @@ class ClientController extends Controller
             'client' => $client->load('timezone'),
             'timezones' => Timezone::query()->orderBy('offset_minutes')->get(['id', 'label', 'name']),
             'availableProjects' => Project::query()->orderBy('name')->get(['id', 'name']),
-            'selectedProjectIds' => $client->projects()->pluck('id'),
+            'selectedProjectIds' => $client->projects()->pluck('projects.id'),
         ]);
     }
 
