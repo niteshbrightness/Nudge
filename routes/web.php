@@ -7,11 +7,8 @@ use App\Http\Controllers\Projects\ProjectController;
 use App\Http\Controllers\WebhookEvents\WebhookEventController;
 use Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests;
 use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Features;
 
-Route::inertia('/', 'welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+Route::redirect('/', '/login')->name('home');
 
 Route::middleware(['auth', 'verified', 'tenant', HandlePrecognitiveRequests::class])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
