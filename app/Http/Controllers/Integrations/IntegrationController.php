@@ -107,9 +107,10 @@ class IntegrationController extends Controller
     public function update(StoreIntegrationRequest $request, Integration $integration): RedirectResponse
     {
         $existing = $integration->credentials ?? [];
-        $incoming = array_filter($request->validated(), fn ($v) => $v !== null && $v !== '');
+        $incoming = $request->validated();
+        $credentials = array_filter(array_merge($existing, $incoming), fn ($v) => $v !== null && $v !== '');
 
-        $this->integrations->upsert($integration->service, array_merge($existing, $incoming));
+        $this->integrations->upsert($integration->service, $credentials);
 
         return redirect()->route('integrations.index')->with('success', 'Integration updated successfully.');
     }
