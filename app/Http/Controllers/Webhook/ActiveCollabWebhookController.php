@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\Log;
 class ActiveCollabWebhookController extends Controller
 {
     public function __construct(
-        private readonly ActiveCollabService $activeCollabService,
         private readonly TinyUrlService $tinyUrlService,
         private readonly WebhookEventRepositoryInterface $webhookEventRepository,
         private readonly ProjectRepositoryInterface $projectRepository,
@@ -51,9 +50,12 @@ class ActiveCollabWebhookController extends Controller
             tenancy()->initialize($integration->tenant);
         }
 
-        $secret = $this->activeCollabService->getWebhookSecret();
+        /** @var ActiveCollabService $activeCollabService */
+        $activeCollabService = app(ActiveCollabService::class);
+
+        $secret = $activeCollabService->getWebhookSecret();
         $signature = $request->header('X-Angie-WebhookSecret', '');
-        if (! empty($secret) && ! $this->activeCollabService->verifySignature($request->getContent(), $signature, $secret)) {
+        if (! empty($secret) && ! $activeCollabService->verifySignature($request->getContent(), $signature, $secret)) {
             Log::warning('ActiveCollab webhook signature mismatch', ['ip' => $request->ip()]);
 
             return response('Unauthorized', Response::HTTP_UNAUTHORIZED);
@@ -61,8 +63,21 @@ class ActiveCollabWebhookController extends Controller
 
         $payload = $request->json()->all();
 
-        $parsed = $this->activeCollabService->parseWebhookPayload($payload);
-        $deepLink = $this->activeCollabService->buildDeepLink($payload);
+        $parsed = $activeCollabService->parseWebhookPayload($payload);
+
+        if (
+            $parsed['task_name'] === null &&
+            $parsed['parent_type'] === 'Task' &&
+            $parsed['parent_id'] &&
+            $parsed['project_id']
+        ) {
+            $parsed['task_name'] = $activeCollabService->fetchTaskName(
+                (int) $parsed['project_id'],
+                (int) $parsed['parent_id']
+            );
+        }
+
+        $deepLink = $activeCollabService->buildDeepLink($payload);
         $shortUrl = $deepLink ? $this->tinyUrlService->shorten($deepLink) : null;
 
         $project = null;

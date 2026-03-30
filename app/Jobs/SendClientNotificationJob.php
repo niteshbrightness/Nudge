@@ -10,6 +10,7 @@ use App\Services\NotificationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Str;
 
 class SendClientNotificationJob implements ShouldQueue
 {
@@ -63,8 +64,15 @@ class SendClientNotificationJob implements ShouldQueue
         }
 
         $lines = $events->map(function (WebhookEvent $event): string {
-            $title = data_get($event->parsed_data, 'title', 'Project update');
+            $title = data_get($event->parsed_data, 'task_name')
+                ?? data_get($event->parsed_data, 'title', 'Project update');
             $description = $this->formatEventType($event->event_type);
+            $actorName = data_get($event->parsed_data, 'created_by_name');
+
+            if ($actorName) {
+                $description .= " by {$actorName}";
+            }
+
             $line = "• {$title}: {$description}";
 
             if ($event->short_url) {
@@ -100,15 +108,25 @@ class SendClientNotificationJob implements ShouldQueue
 
     private function formatEventType(string $eventType): string
     {
-        $normalized = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $eventType));
-
-        return match ($normalized) {
-            'task_created' => 'New task',
-            'task_updated' => 'Updated',
-            'task_completed' => 'Completed',
-            'comment_created' => 'New comment',
-            'project_updated' => 'Updated',
-            default => ucwords(str_replace('_', ' ', $normalized)),
+        return match ($eventType) {
+            'TaskCreated' => 'New task',
+            'TaskUpdated' => 'Status changed',
+            'TaskCompleted' => 'Completed',
+            'TaskMoved' => 'Moved',
+            'TaskDuplicated' => 'Duplicated',
+            'CommentCreated' => 'New comment',
+            'ProjectCreated' => 'New project',
+            'ProjectUpdated' => 'Updated',
+            'DiscussionCreated' => 'New discussion',
+            'NoteCreated' => 'New note',
+            'TimeRecordCreated' => 'Time logged',
+            'ExpenseCreated' => 'Expense logged',
+            'CompanyCreated' => 'New company',
+            'UserInvited' => 'User invited',
+            'UserAccepted' => 'User joined',
+            'ObjectMovedToTrash' => 'Moved to trash',
+            'ObjectRestoredFromTrash' => 'Restored from trash',
+            default => Str::headline($eventType),
         };
     }
 
