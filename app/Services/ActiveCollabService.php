@@ -82,6 +82,13 @@ class ActiveCollabService
         $data = $payload['payload'] ?? [];
         $urlPath = $data['url_path'] ?? null;
         $projectId = $data['project_id'] ?? $payload['project_id'] ?? null;
+        $class = $data['class'] ?? null;
+        $parentType = $data['parent_type'] ?? null;
+        $parentId = $data['parent_id'] ?? null;
+
+        if ($class === 'Comment' && $parentType === 'Task' && $parentId && $projectId) {
+            return "{$this->baseUrl}/projects/{$projectId}/tasks/{$parentId}";
+        }
 
         if ($urlPath) {
             return "{$this->baseUrl}{$urlPath}";

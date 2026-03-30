@@ -233,6 +233,24 @@ describe('ActiveCollabService::buildDeepLink', function () {
 
         expect($service->buildDeepLink(['payload' => []]))->toBeNull();
     });
+
+    it('returns parent task URL for comment on task instead of comment url_path', function () {
+        $service = new ActiveCollabService(baseUrl: 'https://app.activecollab.com/231686');
+
+        $payload = [
+            'payload' => [
+                'class' => 'Comment',
+                'id' => 116917,
+                'url_path' => '/comments/116917',
+                'project_id' => 2096,
+                'parent_type' => 'Task',
+                'parent_id' => 41996,
+            ],
+        ];
+
+        expect($service->buildDeepLink($payload))
+            ->toBe('https://app.activecollab.com/231686/projects/2096/tasks/41996');
+    });
 });
 
 // ──────────────────────────────────────────────────────────────
