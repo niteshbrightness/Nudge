@@ -48,8 +48,8 @@ class ActiveCollabIntegration extends AbstractIntegration
                 'name' => 'webhook_secret',
                 'label' => 'Webhook Secret',
                 'type' => 'password',
-                'required' => true,
-                'hint' => 'Required — used to verify that incoming webhooks are from ActiveCollab. Set the same value in ActiveCollab under Admin → Webhooks.',
+                'required' => false,
+                'hint' => 'Optional — used to verify that incoming webhooks are from ActiveCollab. Set the same value in ActiveCollab under Admin → Webhooks.',
             ],
         ];
     }

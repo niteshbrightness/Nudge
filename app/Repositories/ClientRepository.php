@@ -14,7 +14,7 @@ class ClientRepository implements ClientRepositoryInterface
             ->with('timezone')
             ->withCount('projects')
             ->when($filters['search'] ?? null, fn ($q, $search) => $q->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%")))
-            ->when($filters['project_id'] ?? null, fn ($q, $projectId) => $q->whereHas('projects', fn ($q) => $q->where('id', $projectId)))
+            ->when($filters['project_id'] ?? null, fn ($q, $projectId) => $q->whereHas('projects', fn ($q) => $q->where('projects.id', $projectId)))
             ->latest()
             ->paginate($perPage)
             ->withQueryString();
