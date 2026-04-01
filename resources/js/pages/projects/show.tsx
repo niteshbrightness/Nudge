@@ -30,7 +30,7 @@ export default function ProjectShow({ project }: { project: Project }) {
                             </Button>
                         )}
                         <Button variant="outline" size="sm" asChild>
-                            <a href={edit.url(project.id)}>Edit</a>
+                            <Link href={edit(project.id)}>Edit</Link>
                         </Button>
                         <Badge variant={project.status === 'completed' ? 'secondary' : 'default'}>
                             {project.status.replace('_', ' ')}

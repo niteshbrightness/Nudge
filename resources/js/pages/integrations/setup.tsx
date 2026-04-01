@@ -1,5 +1,4 @@
-import { Head } from '@inertiajs/react';
-import { Form } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { Copy } from 'lucide-react';
 import { useState } from 'react';
 import IntegrationController from '@/actions/App/Http/Controllers/Integrations/IntegrationController';
@@ -118,7 +117,7 @@ export default function IntegrationSetup({ definition, integration, webhookUrl }
                                             {processing ? 'Saving…' : isEdit ? 'Update' : 'Connect'}
                                         </Button>
                                         <Button variant="ghost" asChild>
-                                            <a href={index()}>Cancel</a>
+                                            <Link href={index()}>Cancel</Link>
                                         </Button>
                                     </div>
                                 </>

@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useForm } from 'laravel-precognition-react-inertia';
 import ProjectController from '@/actions/App/Http/Controllers/Projects/ProjectController';
 import Heading from '@/components/heading';
@@ -94,7 +94,7 @@ export default function EditProject({
                                 {form.processing ? 'Saving…' : 'Save Changes'}
                             </Button>
                             <Button variant="ghost" asChild>
-                                <a href={show.url(project.id)}>Cancel</a>
+                                <Link href={show(project.id)}>Cancel</Link>
                             </Button>
                         </div>
                     </form>
