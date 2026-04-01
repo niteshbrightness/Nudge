@@ -40,16 +40,22 @@ export default function ProjectShow({ project }: { project: Project }) {
 
                 <div className="grid gap-4 md:grid-cols-3">
                     <div className="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
-                        <p className="text-xs tracking-wide text-muted-foreground uppercase">Client</p>
-                        <p className="mt-1 font-medium">
-                            {project.client ? (
-                                <Link href={`/clients/${project.client.id}/edit`} className="hover:underline">
-                                    {project.client.name}
-                                </Link>
+                        <p className="text-xs tracking-wide text-muted-foreground uppercase">Clients</p>
+                        <div className="mt-1 font-medium">
+                            {project.clients && project.clients.length > 0 ? (
+                                <ul className="space-y-0.5">
+                                    {project.clients.map((client) => (
+                                        <li key={client.id}>
+                                            <Link href={`/clients/${client.id}/edit`} className="hover:underline">
+                                                {client.name}
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
                             ) : (
                                 <span className="text-muted-foreground italic">Unassigned</span>
                             )}
-                        </p>
+                        </div>
                     </div>
                     <div className="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
                         <p className="text-xs tracking-wide text-muted-foreground uppercase">External ID</p>

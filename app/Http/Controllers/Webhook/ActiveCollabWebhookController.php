@@ -7,7 +7,7 @@ use App\Contracts\Repositories\WebhookEventRepositoryInterface;
 use App\Http\Controllers\Controller;
 use App\Models\Integration;
 use App\Services\ActiveCollabService;
-use App\Services\BitlyService;
+use App\Services\TinyUrlService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -15,14 +15,25 @@ use Illuminate\Support\Facades\Log;
 class ActiveCollabWebhookController extends Controller
 {
     public function __construct(
-        private readonly ActiveCollabService $activeCollabService,
-        private readonly BitlyService $bitlyService,
+        private readonly TinyUrlService $tinyUrlService,
         private readonly WebhookEventRepositoryInterface $webhookEventRepository,
         private readonly ProjectRepositoryInterface $projectRepository,
     ) {}
 
     public function __invoke(Request $request, ?string $webhookToken = null): Response
     {
+        Log::channel('webhook')->info('Incoming webhook request', [
+            'timestamp' => now()->toIso8601String(),
+            'ip' => $request->ip(),
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'headers' => $request->headers->all(),
+            'query' => $request->query(),
+            'body_raw' => $request->getContent(),
+            'body_json' => $request->json()->all(),
+            'webhook_token' => $webhookToken,
+        ]);
+
         $tenantId = null;
 
         if ($webhookToken) {
@@ -39,10 +50,12 @@ class ActiveCollabWebhookController extends Controller
             tenancy()->initialize($integration->tenant);
         }
 
-        $secret = $this->activeCollabService->getWebhookSecret();
-        $signature = $request->header('X-Angie-WebhookSecret', '');
+        /** @var ActiveCollabService $activeCollabService */
+        $activeCollabService = app(ActiveCollabService::class);
 
-        if (! $this->activeCollabService->verifySignature($request->getContent(), $signature, $secret)) {
+        $secret = $activeCollabService->getWebhookSecret();
+        $signature = $request->header('X-Angie-WebhookSecret', '');
+        if (! empty($secret) && ! $activeCollabService->verifySignature($request->getContent(), $signature, $secret)) {
             Log::warning('ActiveCollab webhook signature mismatch', ['ip' => $request->ip()]);
 
             return response('Unauthorized', Response::HTTP_UNAUTHORIZED);
@@ -50,9 +63,22 @@ class ActiveCollabWebhookController extends Controller
 
         $payload = $request->json()->all();
 
-        $parsed = $this->activeCollabService->parseWebhookPayload($payload);
-        $deepLink = $this->activeCollabService->buildDeepLink($payload);
-        $shortUrl = $deepLink ? $this->bitlyService->shorten($deepLink) : null;
+        $parsed = $activeCollabService->parseWebhookPayload($payload);
+
+        if (
+            $parsed['task_name'] === null &&
+            $parsed['parent_type'] === 'Task' &&
+            $parsed['parent_id'] &&
+            $parsed['project_id']
+        ) {
+            $parsed['task_name'] = $activeCollabService->fetchTaskName(
+                (int) $parsed['project_id'],
+                (int) $parsed['parent_id']
+            );
+        }
+
+        $deepLink = $activeCollabService->buildDeepLink($payload);
+        $shortUrl = $deepLink ? $this->tinyUrlService->shorten($deepLink) : null;
 
         $project = null;
         if ($parsed['project_id']) {

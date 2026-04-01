@@ -6,12 +6,12 @@ use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
-#[Fillable(['tenant_id', 'client_id', 'source', 'external_id', 'name', 'description', 'status', 'url'])]
+#[Fillable(['tenant_id', 'source', 'external_id', 'name', 'description', 'status', 'url'])]
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
@@ -22,9 +22,9 @@ class Project extends Model
         return $this->belongsTo(Tenant::class);
     }
 
-    public function client(): BelongsTo
+    public function clients(): BelongsToMany
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsToMany(Client::class);
     }
 
     public function webhookEvents(): HasMany

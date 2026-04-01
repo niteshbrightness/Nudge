@@ -31,7 +31,7 @@ class ClientController extends Controller
     {
         return Inertia::render('clients/create', [
             'timezones' => Timezone::query()->orderBy('offset_minutes')->get(['id', 'label', 'name']),
-            'availableProjects' => Project::query()->whereNull('client_id')->orderBy('name')->get(['id', 'name']),
+            'availableProjects' => Project::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -49,11 +49,8 @@ class ClientController extends Controller
         return Inertia::render('clients/edit', [
             'client' => $client->load('timezone'),
             'timezones' => Timezone::query()->orderBy('offset_minutes')->get(['id', 'label', 'name']),
-            'availableProjects' => Project::query()
-                ->where(fn ($q) => $q->whereNull('client_id')->orWhere('client_id', $client->id))
-                ->orderBy('name')
-                ->get(['id', 'name']),
-            'selectedProjectIds' => Project::query()->where('client_id', $client->id)->pluck('id'),
+            'availableProjects' => Project::query()->orderBy('name')->get(['id', 'name']),
+            'selectedProjectIds' => $client->projects()->pluck('projects.id'),
         ]);
     }
 

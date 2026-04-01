@@ -2,6 +2,7 @@
 
 use App\Jobs\SendClientNotificationJob;
 use App\Models\Client;
+use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\Timezone;
 use Carbon\Carbon;
@@ -19,10 +20,9 @@ afterEach(function () {
     tenancy()->end();
 });
 
-test('dispatches job for client whose local time matches a notification slot', function () {
+test('dispatches job for each active project of a client whose local time matches a notification slot', function () {
     Queue::fake();
 
-    // UTC+0 client at 09:00 UTC — matches 09:00 slot
     $tz = Timezone::create([
         'name' => 'UTC',
         'label' => 'UTC (UTC+00:00)',
@@ -31,15 +31,18 @@ test('dispatches job for client whose local time matches a notification slot', f
     ]);
 
     $client = Client::factory()->create(['timezone_id' => $tz->id]);
+    $projectA = Project::factory()->create(['status' => 'active']);
+    $projectB = Project::factory()->create(['status' => 'active']);
+    $client->projects()->attach([$projectA->id, $projectB->id]);
 
     Carbon::setTestNow(Carbon::parse('09:00', 'UTC'));
     config(['notifications.slots' => ['09:00']]);
 
     $this->artisan('nudge:send-notifications')
-        ->expectsOutput('Dispatched notifications for 1 client(s).')
+        ->expectsOutput('Dispatched 2 notification job(s).')
         ->assertExitCode(0);
 
-    Queue::assertPushed(SendClientNotificationJob::class, fn ($job) => $job->client->id === $client->id);
+    Queue::assertPushed(SendClientNotificationJob::class, 2);
 
     Carbon::setTestNow();
 });
@@ -54,14 +57,16 @@ test('does not dispatch job when client local time does not match any slot', fun
         'offset_minutes' => 0,
     ]);
 
-    Client::factory()->create(['timezone_id' => $tz->id]);
+    $client = Client::factory()->create(['timezone_id' => $tz->id]);
+    $project = Project::factory()->create(['status' => 'active']);
+    $client->projects()->attach($project->id);
 
     // 12:00 UTC — no match for 09:00 slot
     Carbon::setTestNow(Carbon::parse('12:00', 'UTC'));
     config(['notifications.slots' => ['09:00']]);
 
     $this->artisan('nudge:send-notifications')
-        ->expectsOutput('Dispatched notifications for 0 client(s).')
+        ->expectsOutput('Dispatched 0 notification job(s).')
         ->assertExitCode(0);
 
     Queue::assertNothingPushed();
@@ -81,6 +86,8 @@ test('respects client timezone when matching slots', function () {
     ]);
 
     $client = Client::factory()->create(['timezone_id' => $tz->id]);
+    $project = Project::factory()->create(['status' => 'active']);
+    $client->projects()->attach($project->id);
 
     Carbon::setTestNow(Carbon::parse('03:30', 'UTC'));
     config(['notifications.slots' => ['09:00']]);
@@ -88,7 +95,7 @@ test('respects client timezone when matching slots', function () {
     $this->artisan('nudge:send-notifications')
         ->assertExitCode(0);
 
-    Queue::assertPushed(SendClientNotificationJob::class, fn ($job) => $job->client->id === $client->id);
+    Queue::assertPushed(SendClientNotificationJob::class, fn ($job) => $job->client->id === $client->id && $job->project->id === $project->id);
 
     Carbon::setTestNow();
 });
@@ -105,7 +112,7 @@ test('warns and exits when no slots are configured', function () {
     Queue::assertNothingPushed();
 });
 
-test('dispatches jobs for multiple clients in matching timezone', function () {
+test('dispatches one job per client-project pair across multiple clients', function () {
     Queue::fake();
 
     $tz = Timezone::create([
@@ -115,16 +122,78 @@ test('dispatches jobs for multiple clients in matching timezone', function () {
         'offset_minutes' => 0,
     ]);
 
-    Client::factory()->count(3)->create(['timezone_id' => $tz->id]);
+    // 3 clients, each with 1 active project = 3 jobs
+    $clients = Client::factory()->count(3)->create(['timezone_id' => $tz->id]);
+    foreach ($clients as $client) {
+        $project = Project::factory()->create(['status' => 'active']);
+        $client->projects()->attach($project->id);
+    }
 
     Carbon::setTestNow(Carbon::parse('09:00', 'UTC'));
     config(['notifications.slots' => ['09:00']]);
 
     $this->artisan('nudge:send-notifications')
-        ->expectsOutput('Dispatched notifications for 3 client(s).')
+        ->expectsOutput('Dispatched 3 notification job(s).')
         ->assertExitCode(0);
 
     Queue::assertPushed(SendClientNotificationJob::class, 3);
+
+    Carbon::setTestNow();
+});
+
+test('scenario 2: same project assigned to two clients dispatches two jobs', function () {
+    Queue::fake();
+
+    $tz = Timezone::create([
+        'name' => 'UTC',
+        'label' => 'UTC (UTC+00:00)',
+        'offset' => '+00:00',
+        'offset_minutes' => 0,
+    ]);
+
+    $clientA = Client::factory()->create(['timezone_id' => $tz->id]);
+    $clientB = Client::factory()->create(['timezone_id' => $tz->id]);
+    $sharedProject = Project::factory()->create(['status' => 'active']);
+
+    $clientA->projects()->attach($sharedProject->id);
+    $clientB->projects()->attach($sharedProject->id);
+
+    Carbon::setTestNow(Carbon::parse('09:00', 'UTC'));
+    config(['notifications.slots' => ['09:00']]);
+
+    $this->artisan('nudge:send-notifications')
+        ->expectsOutput('Dispatched 2 notification job(s).')
+        ->assertExitCode(0);
+
+    Queue::assertPushed(SendClientNotificationJob::class, 2);
+
+    Carbon::setTestNow();
+});
+
+test('only dispatches jobs for active projects, not on_hold or completed', function () {
+    Queue::fake();
+
+    $tz = Timezone::create([
+        'name' => 'UTC',
+        'label' => 'UTC (UTC+00:00)',
+        'offset' => '+00:00',
+        'offset_minutes' => 0,
+    ]);
+
+    $client = Client::factory()->create(['timezone_id' => $tz->id]);
+    $active = Project::factory()->create(['status' => 'active']);
+    $onHold = Project::factory()->create(['status' => 'on_hold']);
+    $completed = Project::factory()->create(['status' => 'completed']);
+    $client->projects()->attach([$active->id, $onHold->id, $completed->id]);
+
+    Carbon::setTestNow(Carbon::parse('09:00', 'UTC'));
+    config(['notifications.slots' => ['09:00']]);
+
+    $this->artisan('nudge:send-notifications')
+        ->expectsOutput('Dispatched 1 notification job(s).')
+        ->assertExitCode(0);
+
+    Queue::assertPushed(SendClientNotificationJob::class, 1);
 
     Carbon::setTestNow();
 });

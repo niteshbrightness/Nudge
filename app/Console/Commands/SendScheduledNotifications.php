@@ -26,7 +26,13 @@ class SendScheduledNotifications extends Command
 
         $now = CarbonImmutable::now('UTC');
 
-        $clients = Client::query()->with(['timezone'])->where('is_active', true)->get();
+        $clients = Client::query()
+            ->with([
+                'timezone',
+                'projects' => fn ($q) => $q->where('status', 'active'),
+            ])
+            ->where('is_active', true)
+            ->get();
 
         $dispatched = 0;
 
@@ -51,11 +57,13 @@ class SendScheduledNotifications extends Command
                 continue;
             }
 
-            dispatch(new SendClientNotificationJob($client));
-            $dispatched++;
+            foreach ($client->projects as $project) {
+                dispatch(new SendClientNotificationJob($client, $project));
+                $dispatched++;
+            }
         }
 
-        $this->info("Dispatched notifications for {$dispatched} client(s).");
+        $this->info("Dispatched {$dispatched} notification job(s).");
 
         return self::SUCCESS;
     }

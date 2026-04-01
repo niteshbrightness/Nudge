@@ -13,11 +13,11 @@ use App\Repositories\IntegrationRepository;
 use App\Repositories\ProjectRepository;
 use App\Repositories\WebhookEventRepository;
 use App\Services\ActiveCollabService;
-use App\Services\BitlyService;
 use App\Services\IntegrationManager;
 use App\Services\Notifications\TwilioChannel;
 use App\Services\NotificationService;
 use App\Services\ProjectSyncManager;
+use App\Services\TinyUrlService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -43,9 +43,9 @@ class AppServiceProvider extends ServiceProvider
             return $manager;
         });
 
-        $this->app->singleton(BitlyService::class, fn () => new BitlyService(
-            accessToken: config('services.bitly.access_token', ''),
-            apiUrl: config('services.bitly.api_url', 'https://api-ssl.bitly.com/v4'),
+        $this->app->singleton(TinyUrlService::class, fn () => new TinyUrlService(
+            apiToken: config('services.tinyurl.api_token', ''),
+            apiUrl: config('services.tinyurl.api_url', 'https://api.tinyurl.com'),
         ));
 
         $this->app->singleton(ProjectSyncManager::class, function (): ProjectSyncManager {

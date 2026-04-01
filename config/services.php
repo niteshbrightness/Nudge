@@ -48,12 +48,12 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Bitly
+    | TinyURL
     |--------------------------------------------------------------------------
     */
-    'bitly' => [
-        'access_token' => env('BITLY_ACCESS_TOKEN'),
-        'api_url' => 'https://api-ssl.bitly.com/v4',
+    'tinyurl' => [
+        'api_token' => env('TINYURL_API_TOKEN'),
+        'api_url' => 'https://api.tinyurl.com',
     ],
 
 ];

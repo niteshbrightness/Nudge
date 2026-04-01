@@ -39,13 +39,32 @@ class ActiveCollabService
      */
     public function parseWebhookPayload(array $payload): array
     {
+        $data = $payload['payload'] ?? [];
+        $class = $data['class'] ?? null;
+
+        $title = match (true) {
+            in_array($class, ['Comment', 'Discussion']) => $data['body_plain_text'] ?? $data['body'] ?? null,
+            default => $data['name'] ?? $data['body_plain_text'] ?? $data['body'] ?? null,
+        };
+
+        $projectId = $data['project_id'] ?? $payload['project_id'] ?? null;
+
+        if ($projectId === null && isset($data['parent_path'])) {
+            preg_match('/projects\/(\d+)/', $data['parent_path'], $matches);
+            $projectId = isset($matches[1]) ? (int) $matches[1] : null;
+        }
+
         return [
-            'event_type' => $payload['event_type'] ?? $payload['type'] ?? 'unknown',
-            'project_id' => $payload['payload']['project_id'] ?? $payload['project_id'] ?? null,
-            'object_id' => $payload['payload']['id'] ?? null,
-            'object_type' => $payload['payload']['class'] ?? null,
-            'title' => $payload['payload']['name'] ?? $payload['payload']['body'] ?? null,
-            'assignee_id' => $payload['payload']['assignee_id'] ?? null,
+            'event_type' => $payload['type'] ?? $payload['event'] ?? $payload['event_type'] ?? 'unknown',
+            'project_id' => $projectId,
+            'object_id' => $data['id'] ?? null,
+            'object_type' => $class,
+            'title' => $title,
+            'task_name' => $class === 'Task' ? ($data['name'] ?? null) : null,
+            'assignee_id' => $data['assignee_id'] ?? null,
+            'parent_id' => $data['parent_id'] ?? null,
+            'parent_type' => $data['parent_type'] ?? null,
+            'created_by_name' => $data['created_by_name'] ?? null,
         ];
     }
 
@@ -60,19 +79,45 @@ class ActiveCollabService
             return null;
         }
 
-        $projectId = $payload['payload']['project_id'] ?? $payload['project_id'] ?? null;
-        $objectId = $payload['payload']['id'] ?? null;
-        $objectType = strtolower($payload['payload']['class'] ?? '');
+        $data = $payload['payload'] ?? [];
+        $urlPath = $data['url_path'] ?? null;
+        $projectId = $data['project_id'] ?? $payload['project_id'] ?? null;
+        $class = $data['class'] ?? null;
+        $parentType = $data['parent_type'] ?? null;
+        $parentId = $data['parent_id'] ?? null;
 
-        if (! $projectId) {
+        if ($class === 'Comment' && $parentType === 'Task' && $parentId && $projectId) {
+            return "{$this->baseUrl}/projects/{$projectId}/tasks/{$parentId}";
+        }
+
+        if ($urlPath) {
+            return "{$this->baseUrl}{$urlPath}";
+        }
+
+        if ($projectId) {
+            return "{$this->baseUrl}/projects/{$projectId}";
+        }
+
+        return null;
+    }
+
+    /**
+     * Fetch a task's name from the ActiveCollab API.
+     */
+    public function fetchTaskName(int $projectId, int $taskId): ?string
+    {
+        if (empty($this->baseUrl) || empty($this->token)) {
             return null;
         }
 
-        if ($objectId && str_contains($objectType, 'task')) {
-            return "{$this->baseUrl}/projects/{$projectId}/tasks/{$objectId}";
-        }
+        try {
+            $response = Http::withToken($this->token)
+                ->get("{$this->baseUrl}/api/v1/projects/{$projectId}/tasks/{$taskId}");
 
-        return "{$this->baseUrl}/projects/{$projectId}";
+            return $response->json('single.name') ?? $response->json('name') ?? null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function isConfigured(): bool
@@ -97,8 +142,6 @@ class ActiveCollabService
             return false;
         }
 
-        $expected = hash_hmac('sha256', $payload, $secret);
-
-        return hash_equals($expected, $signature);
+        return hash_equals($secret, $signature);
     }
 }

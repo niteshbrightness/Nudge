@@ -17,10 +17,10 @@ class ProjectRepository implements ProjectRepositoryInterface
         $sortDir = ($filters['sort_dir'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
 
         return Project::query()
-            ->with(['client'])
+            ->with(['clients'])
             ->when($filters['search'] ?? null, fn ($q, $search) => $q->where('name', 'like', "%{$search}%"))
             ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
-            ->when($filters['client_id'] ?? null, fn ($q, $clientId) => $q->where('client_id', $clientId))
+            ->when($filters['client_id'] ?? null, fn ($q, $clientId) => $q->whereHas('clients', fn ($q) => $q->where('clients.id', $clientId)))
             ->when($sortBy, fn ($q) => $q->orderBy($sortBy, $sortDir), fn ($q) => $q->latest())
             ->paginate($perPage)
             ->withQueryString();
@@ -28,7 +28,7 @@ class ProjectRepository implements ProjectRepositoryInterface
 
     public function find(int $id): Project
     {
-        return Project::query()->with(['client', 'webhookEvents' => fn ($q) => $q->latest()->limit(10)])->findOrFail($id);
+        return Project::query()->with(['clients', 'webhookEvents' => fn ($q) => $q->latest()->limit(10)])->findOrFail($id);
     }
 
     public function findByExternalId(string $source, string $externalId): ?Project
@@ -48,7 +48,7 @@ class ProjectRepository implements ProjectRepositoryInterface
                 'description' => $project->description,
                 'status' => $project->status,
                 'url' => $project->url,
-            ],
+            ]
         );
     }
 
@@ -56,11 +56,11 @@ class ProjectRepository implements ProjectRepositoryInterface
     {
         $project->update($data);
 
-        return $project->refresh()->load('client');
+        return $project->refresh()->load('clients');
     }
 
     public function allForTenant(): Collection
     {
-        return Project::query()->with('client')->latest()->get();
+        return Project::query()->with('clients')->latest()->get();
     }
 }

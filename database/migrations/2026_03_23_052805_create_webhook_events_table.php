@@ -19,7 +19,7 @@ return new class extends Migration
             $table->jsonb('raw_payload');
             $table->jsonb('parsed_data')->nullable();
             $table->string('activecollab_url')->nullable()->comment('Deep-link to the item in ActiveCollab');
-            $table->string('short_url')->nullable()->comment('Bitly shortened URL');
+            $table->string('short_url')->nullable()->comment('TinyURL shortened URL');
             $table->timestamp('received_at');
             $table->timestamps();
 
