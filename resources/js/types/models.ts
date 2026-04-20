@@ -14,6 +14,8 @@ export interface Client {
     timezone_id: number;
     notes: string | null;
     is_active: boolean;
+    sms_consent: boolean;
+    sms_consent_given_at: string | null;
     timezone?: Timezone;
     projects?: Project[];
     created_at: string;

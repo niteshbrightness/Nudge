@@ -27,6 +27,10 @@ class SendClientNotificationJob implements ShouldQueue
 
     public function handle(NotificationService $notificationService): void
     {
+        if (! $this->client->sms_consent) {
+            return;
+        }
+
         if ($this->alreadySentRecently()) {
             return;
         }

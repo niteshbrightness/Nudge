@@ -9,6 +9,7 @@ use App\Http\Requests\Clients\UpdateClientRequest;
 use App\Models\Client;
 use App\Models\Project;
 use App\Models\Timezone;
+use App\Services\SmsConsentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -35,11 +36,15 @@ class ClientController extends Controller
         ]);
     }
 
-    public function store(StoreClientRequest $request): RedirectResponse
+    public function store(StoreClientRequest $request, SmsConsentService $consentService): RedirectResponse
     {
-        $client = $this->clients->create($request->safe()->except('project_ids'));
+        $client = $this->clients->create($request->safe()->except(['project_ids', 'sms_consent', 'sms_consent_notes']));
         $projectIds = array_map('intval', array_filter($request->input('project_ids', []), fn ($v) => $v !== ''));
         $this->clients->syncProjects($client, $projectIds);
+
+        if ($request->boolean('sms_consent')) {
+            $consentService->grantConsent($client, $request->user(), $request->input('sms_consent_notes'));
+        }
 
         return redirect()->route('clients.index')->with('success', 'Client created successfully.');
     }
@@ -54,11 +59,22 @@ class ClientController extends Controller
         ]);
     }
 
-    public function update(UpdateClientRequest $request, Client $client): RedirectResponse
+    public function update(UpdateClientRequest $request, Client $client, SmsConsentService $consentService): RedirectResponse
     {
-        $this->clients->update($client, $request->safe()->except('project_ids'));
+        $wasConsented = $client->sms_consent;
+
+        $this->clients->update($client, $request->safe()->except(['project_ids', 'sms_consent', 'sms_consent_notes']));
         $projectIds = array_map('intval', array_filter($request->input('project_ids', []), fn ($v) => $v !== ''));
         $this->clients->syncProjects($client, $projectIds);
+
+        $isNowConsented = $request->boolean('sms_consent');
+        $client->refresh();
+
+        if (! $wasConsented && $isNowConsented) {
+            $consentService->grantConsent($client, $request->user(), $request->input('sms_consent_notes'));
+        } elseif ($wasConsented && ! $isNowConsented) {
+            $consentService->revokeConsent($client, $request->user());
+        }
 
         return redirect()->route('clients.index')->with('success', 'Client updated successfully.');
     }

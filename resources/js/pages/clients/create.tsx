@@ -4,6 +4,7 @@ import ClientController from '@/actions/App/Http/Controllers/Clients/ClientContr
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,6 +40,7 @@ export default function CreateClient({
         timezone_id: null as number | null,
         notes: '',
         is_active: 'true',
+        sms_consent: false,
         project_ids: [] as number[],
     });
 
@@ -141,6 +143,26 @@ export default function CreateClient({
                                 placeholder="Search and assign projects…"
                             />
                             <InputError message={form.errors.project_ids} />
+                        </div>
+
+                        <div className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                            <div className="flex items-start gap-3">
+                                <Checkbox
+                                    id="sms_consent"
+                                    checked={form.data.sms_consent}
+                                    onCheckedChange={(checked) => form.setData('sms_consent', checked === true)}
+                                    className="mt-0.5"
+                                />
+                                <Label
+                                    htmlFor="sms_consent"
+                                    className="cursor-pointer text-sm leading-relaxed font-normal"
+                                >
+                                    I confirm that this client has given explicit written consent to receive SMS project
+                                    update notifications from Nudge. Standard message rates may apply. They can opt out
+                                    at any time by replying STOP.
+                                </Label>
+                            </div>
+                            <InputError message={form.errors.sms_consent} className="mt-2 ml-7" />
                         </div>
 
                         <div className="flex gap-3">

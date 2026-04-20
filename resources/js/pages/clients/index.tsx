@@ -3,6 +3,15 @@ import { useCallback, useRef, useState } from 'react';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import AppLayout from '@/layouts/app-layout';
@@ -42,6 +51,17 @@ export default function ClientsIndex({
     projects: SimpleProject[];
 }) {
     const [search, setSearch] = useState(filters.search ?? '');
+    const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+
+    const confirmDelete = () => {
+        if (!clientToDelete) {
+            return;
+        }
+
+        router.delete(destroy(clientToDelete.id), {
+            onFinish: () => setClientToDelete(null),
+        });
+    };
 
     const applyFilters = useCallback((newFilters: Filters) => {
         router.get(
@@ -162,11 +182,9 @@ export default function ClientsIndex({
                                                     variant="ghost"
                                                     size="sm"
                                                     className="text-destructive hover:text-destructive"
-                                                    asChild
+                                                    onClick={() => setClientToDelete(client)}
                                                 >
-                                                    <Link href={destroy(client.id)} method="delete" as="button">
-                                                        Delete
-                                                    </Link>
+                                                    Delete
                                                 </Button>
                                             </div>
                                         </td>
@@ -197,6 +215,25 @@ export default function ClientsIndex({
                     </div>
                 )}
             </div>
+            <Dialog open={!!clientToDelete} onOpenChange={(open) => !open && setClientToDelete(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete {clientToDelete?.name}?</DialogTitle>
+                        <DialogDescription>
+                            This will permanently delete the client and all associated notification logs. This action
+                            cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="ghost">Cancel</Button>
+                        </DialogClose>
+                        <Button variant="destructive" onClick={confirmDelete}>
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

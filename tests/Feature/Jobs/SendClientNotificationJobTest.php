@@ -663,3 +663,21 @@ test('two clients assigned to same project each receive their own SMS', function
 
     expect($notifiedClients)->toContain('Client A')->toContain('Client B');
 });
+
+test('does not send SMS when client has no sms_consent', function () {
+    $client = Client::factory()->create(['sms_consent' => false]);
+    $project = Project::factory()->create(['status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'Some update'],
+        'received_at' => now()->subHour(),
+    ]);
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) {
+        $mock->shouldNotReceive('send');
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+});

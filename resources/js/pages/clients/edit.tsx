@@ -4,6 +4,7 @@ import ClientController from '@/actions/App/Http/Controllers/Clients/ClientContr
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,8 +44,20 @@ export default function EditClient({
         timezone_id: client.timezone_id as number | null,
         notes: client.notes ?? '',
         is_active: client.is_active ? 'true' : 'false',
+        sms_consent: client.sms_consent,
         project_ids: selectedProjectIds,
     });
+
+    const phoneChanged = form.data.phone !== client.phone;
+    const showConsentCheckbox = phoneChanged || !client.sms_consent;
+
+    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        form.setData('phone', e.target.value);
+
+        if (e.target.value !== client.phone) {
+            form.setData('sms_consent', false);
+        }
+    };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -80,7 +93,7 @@ export default function EditClient({
                                 id="phone"
                                 type="tel"
                                 value={form.data.phone}
-                                onChange={(e) => form.setData('phone', e.target.value)}
+                                onChange={handlePhoneChange}
                                 onBlur={() => form.validate('phone')}
                                 placeholder="+17096789000"
                             />
@@ -149,6 +162,28 @@ export default function EditClient({
                             />
                             <InputError message={form.errors.project_ids} />
                         </div>
+
+                        {showConsentCheckbox && (
+                            <div className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                                <div className="flex items-start gap-3">
+                                    <Checkbox
+                                        id="sms_consent"
+                                        checked={form.data.sms_consent}
+                                        onCheckedChange={(checked) => form.setData('sms_consent', checked === true)}
+                                        className="mt-0.5"
+                                    />
+                                    <Label
+                                        htmlFor="sms_consent"
+                                        className="cursor-pointer text-sm leading-relaxed font-normal"
+                                    >
+                                        I confirm that this client has given explicit written consent to receive SMS
+                                        project update notifications from Nudge. Standard message rates may apply. They
+                                        can opt out at any time by replying STOP.
+                                    </Label>
+                                </div>
+                                <InputError message={form.errors.sms_consent} className="mt-2 ml-7" />
+                            </div>
+                        )}
 
                         <div className="flex gap-3">
                             <Button type="submit" disabled={form.processing}>

@@ -18,6 +18,10 @@ class TwilioChannel implements NotificationChannelInterface
 
     public function send(Client $client, string $message): void
     {
+        if (! $client->sms_consent) {
+            throw new RuntimeException("SMS not sent to client #{$client->id}: no SMS consent.");
+        }
+
         if (empty($this->sid) || empty($this->authToken) || empty($this->from)) {
             throw new RuntimeException('Twilio credentials are not configured.');
         }

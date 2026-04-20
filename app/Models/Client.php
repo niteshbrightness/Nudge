@@ -12,11 +12,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
-#[Fillable(['tenant_id', 'name', 'phone', 'timezone_id', 'notes', 'is_active'])]
+#[Fillable(['tenant_id', 'name', 'phone', 'timezone_id', 'notes', 'is_active', 'sms_consent', 'sms_consent_given_at'])]
 class Client extends Model
 {
     /** @use HasFactory<ClientFactory> */
     use BelongsToTenant, HasFactory, SoftDeletes;
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'sms_consent' => 'boolean',
+            'sms_consent_given_at' => 'datetime',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {
@@ -36,5 +45,10 @@ class Client extends Model
     public function notificationLogs(): HasMany
     {
         return $this->hasMany(NotificationLog::class);
+    }
+
+    public function smsConsentLogs(): HasMany
+    {
+        return $this->hasMany(SmsConsentLog::class);
     }
 }

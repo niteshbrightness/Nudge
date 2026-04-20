@@ -25,6 +25,7 @@ class StoreClientRequest extends FormRequest
                 fn ($v) => $v !== '' && $v !== null
             )),
             'is_active' => filter_var($this->input('is_active', 'true'), FILTER_VALIDATE_BOOLEAN),
+            'sms_consent' => filter_var($this->input('sms_consent', 'false'), FILTER_VALIDATE_BOOLEAN),
         ]);
     }
 
@@ -36,6 +37,8 @@ class StoreClientRequest extends FormRequest
             'timezone_id' => ['required', 'integer', 'exists:timezones,id'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'is_active' => ['required', 'boolean'],
+            'sms_consent' => ['required', 'boolean'],
+            'sms_consent_notes' => ['nullable', 'string', 'max:500'],
             'project_ids' => ['nullable', 'array'],
             'project_ids.*' => ['integer', 'exists:projects,id'],
         ];

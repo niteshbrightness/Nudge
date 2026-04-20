@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Webhook\ActiveCollabWebhookController;
+use App\Http\Controllers\Webhook\TwilioInboundWebhookController;
 use Illuminate\Support\Facades\Route;
 
 // Legacy route (no tenant token) — kept for backward compatibility
@@ -12,3 +13,8 @@ Route::any('/webhook/activecollab', ActiveCollabWebhookController::class)
 Route::any('/webhook/activecollab/{webhookToken}', ActiveCollabWebhookController::class)
     ->middleware('throttle:60,1')
     ->name('webhook.activecollab.token');
+
+// Twilio inbound SMS (STOP/START opt-out handling)
+Route::post('/webhook/twilio/inbound', TwilioInboundWebhookController::class)
+    ->middleware('throttle:60,1')
+    ->name('webhook.twilio.inbound');

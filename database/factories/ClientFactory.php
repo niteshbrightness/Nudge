@@ -24,6 +24,7 @@ class ClientFactory extends Factory
             'timezone_id' => Timezone::inRandomOrder()->first()?->id ?? 1,
             'notes' => fake()->optional()->sentence(),
             'is_active' => true,
+            'sms_consent' => true,
         ];
     }
 }
