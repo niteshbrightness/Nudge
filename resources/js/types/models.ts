@@ -55,12 +55,15 @@ export interface NotificationLog {
     id: number;
     tenant_id: string;
     client_id: number;
+    project_id: number | null;
     channel: string;
+    twilio_sid: string | null;
     message: string;
-    status: 'sent' | 'failed';
+    status: 'sent' | 'failed' | 'delivered' | 'undelivered';
     error_message: string | null;
     sent_at: string;
     client?: Client;
+    project?: Project;
     created_at: string;
     updated_at: string;
 }

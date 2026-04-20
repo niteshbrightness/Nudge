@@ -16,7 +16,7 @@ class TwilioChannel implements NotificationChannelInterface
         private readonly string $from = '',
     ) {}
 
-    public function send(Client $client, string $message): void
+    public function send(Client $client, string $message): ?string
     {
         if (! $client->sms_consent) {
             throw new RuntimeException("SMS not sent to client #{$client->id}: no SMS consent.");
@@ -34,6 +34,8 @@ class TwilioChannel implements NotificationChannelInterface
                 'From' => $this->from,
                 'To' => $client->phone,
                 'Body' => $message,
+                'StatusCallback' => route('webhook.twilio.status'),
+                'StatusCallbackMethod' => 'POST',
             ]);
 
         if ($response->failed()) {
@@ -44,5 +46,7 @@ class TwilioChannel implements NotificationChannelInterface
         }
 
         Log::info('Twilio SMS sent', ['client_id' => $client->id, 'to' => $client->phone]);
+
+        return $response->json('sid');
     }
 }

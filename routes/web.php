@@ -4,6 +4,7 @@ use App\Http\Controllers\Clients\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Integrations\IntegrationController;
 use App\Http\Controllers\Projects\ProjectController;
+use App\Http\Controllers\SmsHistory\SmsHistoryController;
 use App\Http\Controllers\WebhookEvents\WebhookEventController;
 use Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,9 @@ Route::middleware(['auth', 'verified', 'tenant', HandlePrecognitiveRequests::cla
     // Webhook event log (read-only)
     Route::get('webhooks', [WebhookEventController::class, 'index'])->name('webhooks.index');
     Route::get('webhooks/{webhookEvent}', [WebhookEventController::class, 'show'])->name('webhooks.show');
+
+    // SMS History (read-only)
+    Route::get('sms-history', [SmsHistoryController::class, 'index'])->name('sms-history.index');
 
     // Integrations
     Route::get('integrations', [IntegrationController::class, 'index'])->name('integrations.index');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Webhook;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Webhook\Concerns\ValidatesTwilioSignature;
 use App\Models\Client;
 use App\Models\TwilioInboundLog;
 use App\Services\SmsConsentService;
@@ -11,6 +12,8 @@ use Illuminate\Http\Response;
 
 class TwilioInboundWebhookController extends Controller
 {
+    use ValidatesTwilioSignature;
+
     protected $cancelKeywords = ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'QUIT'];
 
     protected $optInKeywords = ['START', 'UNSTOP', 'YES'];
@@ -50,31 +53,5 @@ class TwilioInboundWebhookController extends Controller
 
         return response('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', 200)
             ->header('Content-Type', 'text/xml');
-    }
-
-    private function isValidTwilioSignature(Request $request): bool
-    {
-        $authToken = config('notifications.twilio.auth_token', '');
-
-        if (empty($authToken)) {
-            return false;
-        }
-
-        $url = $request->fullUrl();
-        $params = $request->post();
-        $signature = $request->header('X-Twilio-Signature', '');
-
-        $validationString = $url;
-
-        if (! empty($params)) {
-            ksort($params);
-            foreach ($params as $key => $value) {
-                $validationString .= $key.$value;
-            }
-        }
-
-        $computed = base64_encode(hash_hmac('sha1', $validationString, $authToken, true));
-
-        return hash_equals($computed, $signature);
     }
 }

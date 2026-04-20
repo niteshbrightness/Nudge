@@ -22,13 +22,14 @@ class NotificationService
         $channelName = config('notifications.channel', 'twilio');
 
         try {
-            $this->channel->send($client, $message);
+            $twilio_sid = $this->channel->send($client, $message);
 
             NotificationLog::create([
                 'tenant_id' => $client->tenant_id,
                 'client_id' => $client->id,
                 'project_id' => $projectId,
                 'channel' => $channelName,
+                'twilio_sid' => $twilio_sid,
                 'message' => $message,
                 'status' => 'sent',
                 'sent_at' => now(),

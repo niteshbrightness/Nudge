@@ -6,5 +6,5 @@ use App\Models\Client;
 
 interface NotificationChannelInterface
 {
-    public function send(Client $client, string $message): void;
+    public function send(Client $client, string $message): ?string;
 }

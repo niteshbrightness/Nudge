@@ -4,12 +4,14 @@ namespace App\Providers;
 
 use App\Contracts\Repositories\ClientRepositoryInterface;
 use App\Contracts\Repositories\IntegrationRepositoryInterface;
+use App\Contracts\Repositories\NotificationLogRepositoryInterface;
 use App\Contracts\Repositories\ProjectRepositoryInterface;
 use App\Contracts\Repositories\WebhookEventRepositoryInterface;
 use App\Integrations\ActiveCollabIntegration;
 use App\ProjectSync\Sources\ActiveCollabSource;
 use App\Repositories\ClientRepository;
 use App\Repositories\IntegrationRepository;
+use App\Repositories\NotificationLogRepository;
 use App\Repositories\ProjectRepository;
 use App\Repositories\WebhookEventRepository;
 use App\Services\ActiveCollabService;
@@ -35,6 +37,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ProjectRepositoryInterface::class, ProjectRepository::class);
         $this->app->bind(WebhookEventRepositoryInterface::class, WebhookEventRepository::class);
         $this->app->bind(IntegrationRepositoryInterface::class, IntegrationRepository::class);
+        $this->app->bind(NotificationLogRepositoryInterface::class, NotificationLogRepository::class);
 
         $this->app->singleton(IntegrationManager::class, function (): IntegrationManager {
             $manager = new IntegrationManager;
