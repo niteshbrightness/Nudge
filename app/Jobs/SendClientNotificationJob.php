@@ -50,7 +50,7 @@ class SendClientNotificationJob implements ShouldQueue
         return NotificationLog::query()
             ->where('client_id', $this->client->id)
             ->where('project_id', $this->project->id)
-            ->where('status', 'sent')
+            ->whereNotIn('status', ['failed'])
             ->where('sent_at', '>=', now()->subMinutes(15))
             ->exists();
     }
@@ -139,7 +139,7 @@ class SendClientNotificationJob implements ShouldQueue
         $lastLog = NotificationLog::query()
             ->where('client_id', $this->client->id)
             ->where('project_id', $this->project->id)
-            ->where('status', 'sent')
+            ->whereIn('status', ['sent', 'delivered'])
             ->latest('sent_at')
             ->first();
 
