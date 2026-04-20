@@ -11,11 +11,15 @@ use Illuminate\Http\Response;
 
 class TwilioInboundWebhookController extends Controller
 {
+    protected $cancelKeywords = ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'QUIT'];
+
+    protected $optInKeywords = ['START', 'UNSTOP', 'YES'];
+
     public function __invoke(Request $request, SmsConsentService $consentService): Response
     {
-        // if (! $this->isValidTwilioSignature($request)) {
-        //     abort(403, 'Invalid Twilio signature.');
-        // }
+        if (! $this->isValidTwilioSignature($request)) {
+            abort(403, 'Invalid Twilio signature.');
+        }
 
         $from = $request->input('From');
         $body = trim(strtoupper($request->input('Body', '')));
@@ -25,22 +29,17 @@ class TwilioInboundWebhookController extends Controller
             ->get();
 
         $action = null;
-
-        foreach ($clients as $client) {
-            if (
-                str_starts_with($body, 'STOP')
-                || $body === 'UNSUBSCRIBE'
-                || $body === 'CANCEL'
-                || $body === 'QUIT'
-            ) {
-                $action = 'stop';
-                $consentService->handleOptOut($client, $request->input('Body'), $from);
-            } elseif ($body === 'START' || $body === 'UNSTOP' || $body === 'YES') {
-                $action = 'start';
-                $consentService->handleOptIn($client, $request->input('Body'), $from);
+        if ($request->input('SmsStatus') == 'received') {
+            foreach ($clients as $client) {
+                if (in_array($body, $this->cancelKeywords)) {
+                    $action = 'stop';
+                    $consentService->handleOptOut($client, $request->input('Body'), $from);
+                } elseif (in_array($body, $this->optInKeywords)) {
+                    $action = 'start';
+                    $consentService->handleOptIn($client, $request->input('Body'), $from);
+                }
             }
         }
-
         TwilioInboundLog::create([
             'from_number' => $from,
             'body' => $request->input('Body', ''),
