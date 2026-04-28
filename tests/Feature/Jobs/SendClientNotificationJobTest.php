@@ -1,13 +1,16 @@
 <?php
 
+use App\Exceptions\UnsubscribedRecipientException;
 use App\Jobs\SendClientNotificationJob;
 use App\Models\Client;
 use App\Models\NotificationLog;
 use App\Models\Project;
+use App\Models\SmsConsentLog;
 use App\Models\Tenant;
 use App\Models\Timezone;
 use App\Models\WebhookEvent;
 use App\Services\NotificationService;
+use App\Services\SmsConsentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
 
@@ -66,7 +69,7 @@ test('sends notification with events since last successful log', function () {
             ->withArgs(fn ($c, string $message) => str_contains($message, 'New task created'));
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 });
 
 test('uses max_lookback_days fallback when no prior log exists', function () {
@@ -96,7 +99,68 @@ test('uses max_lookback_days fallback when no prior log exists', function () {
             ->withArgs(fn ($c, string $message) => str_contains($message, 'Within lookback') && ! str_contains($message, 'Outside lookback'));
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
+});
+
+test('excludes events before sms_consent_given_at when no prior log exists and consent is more recent than lookback', function () {
+    config(['notifications.max_lookback_days' => 7]);
+
+    $consentAt = now()->subDays(2);
+    $client = Client::factory()->create(['sms_consent_given_at' => $consentAt]);
+    $project = Project::factory()->create(['status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    // Event after consent — SHOULD appear
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'After consent'],
+        'received_at' => now()->subDay(),
+    ]);
+
+    // Event before consent but within lookback — should NOT appear
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'Before consent'],
+        'received_at' => now()->subDays(5),
+    ]);
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(fn ($c, string $message) => str_contains($message, 'After consent') && ! str_contains($message, 'Before consent'));
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
+});
+
+test('uses lookback window when sms_consent_given_at is older than lookback', function () {
+    config(['notifications.max_lookback_days' => 3]);
+
+    $client = Client::factory()->create(['sms_consent_given_at' => now()->subDays(10)]);
+    $project = Project::factory()->create(['status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    // Event within lookback — SHOULD appear
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'Within lookback'],
+        'received_at' => now()->subDays(2),
+    ]);
+
+    // Event outside lookback — should NOT appear
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'Outside lookback'],
+        'received_at' => now()->subDays(5),
+    ]);
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(fn ($c, string $message) => str_contains($message, 'Within lookback') && ! str_contains($message, 'Outside lookback'));
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 });
 
 test('skips send when no new events exist since last notification', function () {
@@ -124,7 +188,7 @@ test('skips send when no new events exist since last notification', function () 
         $mock->shouldNotReceive('send');
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 });
 
 test('deduplication guard prevents sending when already sent within 15 minutes', function () {
@@ -151,7 +215,7 @@ test('deduplication guard prevents sending when already sent within 15 minutes',
         $mock->shouldNotReceive('send');
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 });
 
 test('deduplication is per-project so different projects are not blocked by each other', function () {
@@ -183,8 +247,8 @@ test('deduplication is per-project so different projects are not blocked by each
             ->withArgs(fn ($c, string $message) => str_contains($message, 'Project B'));
     });
 
-    (new SendClientNotificationJob($client, $projectA))->handle(app(NotificationService::class));
-    (new SendClientNotificationJob($client, $projectB))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $projectA))->handle(app(NotificationService::class), app(SmsConsentService::class));
+    (new SendClientNotificationJob($client, $projectB))->handle(app(NotificationService::class), app(SmsConsentService::class));
 });
 
 test('uses sent_at not queried_since as cutoff for next notification', function () {
@@ -227,7 +291,7 @@ test('uses sent_at not queried_since as cutoff for next notification', function 
             ->withArgs(fn ($c, string $message) => str_contains($message, 'New event after last send') && ! str_contains($message, 'Old event'));
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 });
 
 test('ignores failed logs when determining last sent time', function () {
@@ -273,7 +337,7 @@ test('ignores failed logs when determining last sent time', function () {
             ->withArgs(fn ($c, string $message) => str_contains($message, 'Event after failure'));
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 });
 
 test('all events are included when they fit within 1600 chars', function () {
@@ -299,7 +363,7 @@ test('all events are included when they fit within 1600 chars', function () {
             });
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect(substr_count($capturedMessage, '•'))->toBe(7);
 });
@@ -330,7 +394,7 @@ test('message does not exceed 1600 characters when events are long', function ()
             });
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect(strlen($capturedMessage))->toBeLessThanOrEqual(1600);
 });
@@ -361,7 +425,7 @@ test('suffix appended when events are dropped due to character limit', function 
             });
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect($capturedMessage)->toMatch('/and \d+ more updates/');
 });
@@ -394,7 +458,7 @@ test('suffix shows exact count of dropped events', function () {
             });
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     preg_match('/and (\d+) more updates/', $capturedMessage, $matches);
     $droppedCount = (int) $matches[1];
@@ -427,7 +491,7 @@ test('no suffix when all events fit within 1600 chars', function () {
             });
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect($capturedMessage)->not->toContain('more updates');
 });
@@ -457,7 +521,7 @@ test('message includes project name header', function () {
             });
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect($capturedMessage)
         ->toContain('Project: Alpha Redesign')
@@ -489,7 +553,7 @@ test('url appears on indented line below event bullet when short_url is set', fu
             });
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect($capturedMessage)->toContain("• Some task: Status changed\n  tinyurl.com/xyz789");
 });
@@ -518,7 +582,7 @@ test('task_name is preferred over title when both are present', function () {
             });
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect($capturedMessage)
         ->toContain('My Task')
@@ -549,7 +613,7 @@ test('falls back to title when task_name is absent', function () {
             });
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect($capturedMessage)->toContain('Fallback title');
 });
@@ -585,7 +649,7 @@ test('actor name appears in message when created_by_name is set', function () {
             });
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect($capturedMessage)
         ->toContain('• Homepage layout: New comment by John')
@@ -623,8 +687,8 @@ test('client with two projects dispatches separate jobs producing separate messa
             });
     });
 
-    (new SendClientNotificationJob($client, $projectA))->handle(app(NotificationService::class));
-    (new SendClientNotificationJob($client, $projectB))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $projectA))->handle(app(NotificationService::class), app(SmsConsentService::class));
+    (new SendClientNotificationJob($client, $projectB))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect($sentMessages)->toHaveCount(2);
     expect($sentMessages[0])->toContain('Project Alpha')->toContain('Alpha task');
@@ -658,8 +722,8 @@ test('two clients assigned to same project each receive their own SMS', function
             });
     });
 
-    (new SendClientNotificationJob($clientA, $project))->handle(app(NotificationService::class));
-    (new SendClientNotificationJob($clientB, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($clientA, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
+    (new SendClientNotificationJob($clientB, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect($notifiedClients)->toContain('Client A')->toContain('Client B');
 });
@@ -679,7 +743,7 @@ test('does not send SMS when client has no sms_consent', function () {
         $mock->shouldNotReceive('send');
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 });
 
 test('appends opt-out suffix on first ever SMS for client', function () {
@@ -706,7 +770,7 @@ test('appends opt-out suffix on first ever SMS for client', function () {
             });
     });
 
-    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect($capturedMessage)
         ->toContain('First update')
@@ -749,9 +813,38 @@ test('does not append opt-out suffix when client has prior sent log on a differe
             });
     });
 
-    (new SendClientNotificationJob($client, $projectB))->handle(app(NotificationService::class));
+    (new SendClientNotificationJob($client, $projectB))->handle(app(NotificationService::class), app(SmsConsentService::class));
 
     expect($capturedMessage)
         ->toContain('Follow-up update')
         ->not->toContain('Reply STOP to opt out.');
+});
+
+test('revokes sms consent when twilio returns unsubscribed recipient error', function () {
+    $client = Client::factory()->create(['sms_consent' => true]);
+    $project = Project::factory()->create(['status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'Some update'],
+        'received_at' => now()->subHour(),
+    ]);
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->andThrow(new UnsubscribedRecipientException('Twilio error: Attempt to send to unsubscribed recipient'));
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class), app(SmsConsentService::class));
+
+    expect($client->fresh()->sms_consent)->toBeFalse();
+
+    expect(SmsConsentLog::query()
+        ->where('client_id', $client->id)
+        ->where('method', 'system')
+        ->where('action', 'revoked')
+        ->exists()
+    )->toBeTrue();
 });

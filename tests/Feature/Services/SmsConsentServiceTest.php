@@ -58,12 +58,14 @@ describe('grantConsent', function () {
 });
 
 describe('revokeConsent', function () {
-    it('sets sms_consent to false', function () {
-        $client = Client::factory()->create(['sms_consent' => true]);
+    it('sets sms_consent to false and clears sms_consent_given_at', function () {
+        $client = Client::factory()->create(['sms_consent' => true, 'sms_consent_given_at' => now()]);
 
         $this->service->revokeConsent($client, $this->admin);
 
-        expect($client->fresh()->sms_consent)->toBeFalse();
+        expect($client->fresh())
+            ->sms_consent->toBeFalse()
+            ->sms_consent_given_at->toBeNull();
     });
 
     it('creates an sms_consent_logs record with action revoked and method admin', function () {
@@ -81,12 +83,14 @@ describe('revokeConsent', function () {
 });
 
 describe('handleOptOut', function () {
-    it('sets sms_consent to false', function () {
-        $client = Client::factory()->create(['sms_consent' => true]);
+    it('sets sms_consent to false and clears sms_consent_given_at', function () {
+        $client = Client::factory()->create(['sms_consent' => true, 'sms_consent_given_at' => now()]);
 
         $this->service->handleOptOut($client, 'STOP', $client->phone);
 
-        expect($client->fresh()->sms_consent)->toBeFalse();
+        expect($client->fresh())
+            ->sms_consent->toBeFalse()
+            ->sms_consent_given_at->toBeNull();
     });
 
     it('creates an sms_consent_logs record with action stop and method inbound_sms', function () {

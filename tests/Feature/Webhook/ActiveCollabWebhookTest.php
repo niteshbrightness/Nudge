@@ -169,6 +169,32 @@ describe('ActiveCollabService::parseWebhookPayload', function () {
             ->and($parsed['created_by_name'])->toBe('Harit Soni');
     });
 
+    it('uses the object id as project_id for ProjectUpdated events', function () {
+        $service = new ActiveCollabService;
+
+        $payload = [
+            'type' => 'ProjectUpdated',
+            'instance_id' => 231686,
+            'timestamp' => 1777328097,
+            'payload' => [
+                'class' => 'Project',
+                'id' => 1641,
+                'url_path' => '/projects/1641',
+                'name' => 'Salt & Light',
+                'created_by_name' => 'Martin Masin',
+            ],
+        ];
+
+        $parsed = $service->parseWebhookPayload($payload);
+
+        expect($parsed['event_type'])->toBe('ProjectUpdated')
+            ->and($parsed['project_id'])->toBe(1641)
+            ->and($parsed['object_id'])->toBe(1641)
+            ->and($parsed['object_type'])->toBe('Project')
+            ->and($parsed['title'])->toBe('Salt & Light')
+            ->and($parsed['created_by_name'])->toBe('Martin Masin');
+    });
+
     it('returns null project_id when parent_path has no project segment', function () {
         $service = new ActiveCollabService;
 

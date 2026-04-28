@@ -27,7 +27,7 @@ class SmsConsentService
 
     public function revokeConsent(Client $client, User $admin): void
     {
-        $client->update(['sms_consent' => false]);
+        $client->update(['sms_consent' => false, 'sms_consent_given_at' => null]);
 
         SmsConsentLog::create([
             'phone_number' => $client->phone,
@@ -39,9 +39,23 @@ class SmsConsentService
         ]);
     }
 
+    public function revokeConsentViaSystem(Client $client, string $reason): void
+    {
+        $client->update(['sms_consent' => false, 'sms_consent_given_at' => null]);
+
+        SmsConsentLog::create([
+            'phone_number' => $client->phone,
+            'client_id' => $client->id,
+            'tenant_id' => $client->tenant_id,
+            'sms_content' => $reason,
+            'action' => 'revoked',
+            'method' => 'system',
+        ]);
+    }
+
     public function handleOptOut(Client $client, string $messageBody, string $fromNumber): void
     {
-        $client->update(['sms_consent' => false]);
+        $client->update(['sms_consent' => false, 'sms_consent_given_at' => null]);
 
         SmsConsentLog::create([
             'phone_number' => $fromNumber,

@@ -2,11 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\UnsubscribedRecipientException;
 use App\Models\Client;
 use App\Models\NotificationLog;
 use App\Models\Project;
 use App\Models\WebhookEvent;
 use App\Services\NotificationService;
+use App\Services\SmsConsentService;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -25,7 +27,7 @@ class SendClientNotificationJob implements ShouldQueue
         public readonly Project $project,
     ) {}
 
-    public function handle(NotificationService $notificationService): void
+    public function handle(NotificationService $notificationService, SmsConsentService $smsConsentService): void
     {
         if (! $this->client->sms_consent) {
             return;
@@ -43,7 +45,12 @@ class SendClientNotificationJob implements ShouldQueue
             return;
         }
 
-        $notificationService->send($this->client, $message, $since, $this->project->id);
+        try {
+            $notificationService->send($this->client, $message, $since, $this->project->id);
+        } catch (UnsubscribedRecipientException $e) {
+            $smsConsentService->revokeConsentViaSystem($this->client, $e->getMessage());
+            $this->fail($e);
+        }
     }
 
     private function alreadySentRecently(): bool
@@ -153,11 +160,20 @@ class SendClientNotificationJob implements ShouldQueue
             ->first();
 
         if ($lastLog) {
-            return CarbonImmutable::parse($lastLog->sent_at);
+            return CarbonImmutable::parse($lastLog->sent_at)->utc();
         }
 
         $maxLookbackDays = (int) config('notifications.max_lookback_days', 7);
+        $lookback = CarbonImmutable::now()->utc()->subDays($maxLookbackDays);
 
-        return CarbonImmutable::now()->subDays($maxLookbackDays);
+        if ($this->client->sms_consent_given_at) {
+            $consentAt = CarbonImmutable::parse($this->client->sms_consent_given_at)->utc();
+
+            if ($consentAt->gt($lookback)) {
+                return $consentAt;
+            }
+        }
+
+        return $lookback;
     }
 }

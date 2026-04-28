@@ -3,6 +3,7 @@
 namespace App\Services\Notifications;
 
 use App\Contracts\Notifications\NotificationChannelInterface;
+use App\Exceptions\UnsubscribedRecipientException;
 use App\Models\Client;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -41,6 +42,10 @@ class TwilioChannel implements NotificationChannelInterface
         if ($response->failed()) {
             $error = $response->json('message', 'Unknown error');
             Log::error('Twilio send failed', ['client_id' => $client->id, 'error' => $error]);
+
+            if (str_contains($error, 'unsubscribed recipient')) {
+                throw new UnsubscribedRecipientException("Twilio error: {$error}");
+            }
 
             throw new RuntimeException("Twilio error: {$error}");
         }

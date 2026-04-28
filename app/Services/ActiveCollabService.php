@@ -49,6 +49,10 @@ class ActiveCollabService
 
         $projectId = $data['project_id'] ?? $payload['project_id'] ?? null;
 
+        if ($projectId === null && $class === 'Project') {
+            $projectId = isset($data['id']) ? (int) $data['id'] : null;
+        }
+
         if ($projectId === null && isset($data['parent_path'])) {
             preg_match('/projects\/(\d+)/', $data['parent_path'], $matches);
             $projectId = isset($matches[1]) ? (int) $matches[1] : null;

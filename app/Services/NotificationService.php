@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Contracts\Notifications\NotificationChannelInterface;
+use App\Exceptions\UnsubscribedRecipientException;
 use App\Models\Client;
 use App\Models\NotificationLog;
 use Illuminate\Support\Facades\Log;
@@ -35,6 +36,27 @@ class NotificationService
                 'sent_at' => now(),
                 'queried_since' => $queriedSince,
             ]);
+        } catch (UnsubscribedRecipientException $e) {
+            Log::error('Notification send failed', [
+                'client_id' => $client->id,
+                'project_id' => $projectId,
+                'channel' => $channelName,
+                'error' => $e->getMessage(),
+            ]);
+
+            NotificationLog::create([
+                'tenant_id' => $client->tenant_id,
+                'client_id' => $client->id,
+                'project_id' => $projectId,
+                'channel' => $channelName,
+                'message' => $message,
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+                'sent_at' => now(),
+                'queried_since' => $queriedSince,
+            ]);
+
+            throw $e;
         } catch (Throwable $e) {
             Log::error('Notification send failed', [
                 'client_id' => $client->id,
