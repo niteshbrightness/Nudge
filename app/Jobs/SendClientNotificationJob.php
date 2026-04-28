@@ -76,8 +76,8 @@ class SendClientNotificationJob implements ShouldQueue
         }
 
         $lines = $events->map(function (WebhookEvent $event): string {
-            $title = data_get($event->parsed_data, 'task_name')
-                ?? data_get($event->parsed_data, 'title', 'Project update');
+            $title = data_get($event->parsed_data, 'task_name');
+                //?? data_get($event->parsed_data, 'title', 'Project update');
             $description = $this->formatEventType($event->event_type);
             $actorName = data_get($event->parsed_data, 'created_by_name');
 
