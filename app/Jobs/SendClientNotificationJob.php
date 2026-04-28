@@ -36,7 +36,8 @@ class SendClientNotificationJob implements ShouldQueue
         }
 
         $since = $this->lastSuccessfulNotificationAt();
-        $message = $this->buildMessage($since);
+        $suffix = $this->isFirstMessageForClient() ? "\nReply STOP to opt out." : '';
+        $message = $this->buildMessage($since, $suffix);
 
         if (empty($message)) {
             return;
@@ -55,7 +56,7 @@ class SendClientNotificationJob implements ShouldQueue
             ->exists();
     }
 
-    private function buildMessage(CarbonImmutable $since): string
+    private function buildMessage(CarbonImmutable $since, string $suffix = ''): string
     {
         $events = WebhookEvent::query()
             ->where('project_id', $this->project->id)
@@ -87,7 +88,7 @@ class SendClientNotificationJob implements ShouldQueue
         })->values()->all();
 
         $header = "Project: {$this->project->name}";
-        $maxLength = 1600;
+        $maxLength = 1600 - strlen($suffix);
         $includedCount = count($lines);
 
         while ($includedCount > 0) {
@@ -101,7 +102,7 @@ class SendClientNotificationJob implements ShouldQueue
             }
 
             if (strlen($message) <= $maxLength) {
-                return $message;
+                return $message.$suffix;
             }
 
             $includedCount--;
@@ -132,6 +133,14 @@ class SendClientNotificationJob implements ShouldQueue
             'ObjectRestoredFromTrash' => 'Restored from trash',
             default => Str::headline($eventType),
         };
+    }
+
+    private function isFirstMessageForClient(): bool
+    {
+        return ! NotificationLog::query()
+            ->where('client_id', $this->client->id)
+            ->whereIn('status', ['sent', 'delivered'])
+            ->exists();
     }
 
     private function lastSuccessfulNotificationAt(): CarbonImmutable

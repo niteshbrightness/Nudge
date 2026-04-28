@@ -681,3 +681,77 @@ test('does not send SMS when client has no sms_consent', function () {
 
     (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
 });
+
+test('appends opt-out suffix on first ever SMS for client', function () {
+    $client = Client::factory()->create();
+    $project = Project::factory()->create(['name' => 'My Project', 'status' => 'active']);
+    $client->projects()->attach($project->id);
+
+    WebhookEvent::factory()->create([
+        'project_id' => $project->id,
+        'parsed_data' => ['title' => 'First update'],
+        'event_type' => 'TaskCreated',
+        'received_at' => now()->subHour(),
+    ]);
+
+    $capturedMessage = '';
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) use (&$capturedMessage) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(function ($c, string $message) use (&$capturedMessage) {
+                $capturedMessage = $message;
+
+                return true;
+            });
+    });
+
+    (new SendClientNotificationJob($client, $project))->handle(app(NotificationService::class));
+
+    expect($capturedMessage)
+        ->toContain('First update')
+        ->toEndWith("\nReply STOP to opt out.")
+        ->and(strlen($capturedMessage))->toBeLessThanOrEqual(1600);
+});
+
+test('does not append opt-out suffix when client has prior sent log on a different project', function () {
+    $client = Client::factory()->create();
+    $projectA = Project::factory()->create(['name' => 'Project A', 'status' => 'active']);
+    $projectB = Project::factory()->create(['name' => 'Project B', 'status' => 'active']);
+    $client->projects()->attach([$projectA->id, $projectB->id]);
+
+    NotificationLog::create([
+        'tenant_id' => 'test-tenant',
+        'client_id' => $client->id,
+        'project_id' => $projectA->id,
+        'channel' => 'twilio',
+        'message' => 'Earlier message',
+        'status' => 'sent',
+        'sent_at' => now()->subDay(),
+    ]);
+
+    WebhookEvent::factory()->create([
+        'project_id' => $projectB->id,
+        'parsed_data' => ['title' => 'Follow-up update'],
+        'event_type' => 'TaskUpdated',
+        'received_at' => now()->subHour(),
+    ]);
+
+    $capturedMessage = '';
+
+    $this->mock(NotificationService::class, function (MockInterface $mock) use (&$capturedMessage) {
+        $mock->shouldReceive('send')
+            ->once()
+            ->withArgs(function ($c, string $message) use (&$capturedMessage) {
+                $capturedMessage = $message;
+
+                return true;
+            });
+    });
+
+    (new SendClientNotificationJob($client, $projectB))->handle(app(NotificationService::class));
+
+    expect($capturedMessage)
+        ->toContain('Follow-up update')
+        ->not->toContain('Reply STOP to opt out.');
+});
